@@ -20,18 +20,20 @@ Tagline: *One consistent record of when and where Earth burns.*
 
 ## High-Level Project Summary
 
-Ember Calendar is a web application that turns two decades of NASA satellite fire
-detections into one consistent monthly burning-activity calendar for any region on Earth. It
-harmonizes MODIS and VIIRS active-fire hotspots from NASA FIRMS onto a 0.25° grid and
-calibrates VIIRS to MODIS on their overlapping years, so a change of sensor no longer looks
-like a change in fire activity. Users draw an area of interest or type coordinates, choose a
-date range, and immediately see a year-by-month heatmap of harmonized burning activity, the
-selected month compared with its historical median, and a downloadable CSV. Two calibrated
-metrics are available — fire cell-days (platform-independent) and raw hotspot detections —
-and a hotspot-level CSV can be exported for any area and period, together with a reliability
-flag showing whether each cell used its own calibration or the global fallback. Emergency
-managers, land managers and scientists can use it to identify peak fire seasons, exceptional
-years and anomalous months at a glance.
+Ember Calendar is a web application that turns NASA satellite fire detections into one
+consistent monthly burning-activity calendar for a region of interest. It harmonizes MODIS and
+VIIRS active-fire hotspots from NASA FIRMS onto a 0.25° grid and calibrates VIIRS to MODIS on
+their overlapping years, so a change of sensor no longer looks like a change in fire
+activity. The submitted build uses a real Argentina extract: 3,536,296 quality-filtered
+detections from 2012 to October 2026, aggregated into 199,587 cell-months across 4,133 grid
+cells. Users draw an area of interest or type coordinates, choose a date range, and
+immediately see a year-by-month heatmap of harmonized burning activity, the selected month
+compared with its historical median, and a downloadable CSV. Two calibrated metrics are
+available — fire cell-days (platform-independent) and raw hotspot detections — together with
+a reliability flag showing whether each cell used its own calibration or the overall
+fallback. A hotspot-level CSV can be generated with the pipeline for any area and period.
+Emergency managers, land managers and scientists can use it to identify peak fire seasons,
+exceptional years and anomalous months at a glance.
 
 ---
 
@@ -46,7 +48,8 @@ Releases. Test the link in a private browser window before submitting.
 
 ## Link to Final Project
 
-`https://github.com/Ritika-Bhati-2266/Harmonization-of-MODIS-and-VIIRS-Hot-Spots`
+Live app: `https://harmonization-of-modis-and-viirs-hot.onrender.com`
+Repository: `https://github.com/Ritika-Bhati-2266/Harmonization-of-MODIS-and-VIIRS-Hot-Spots`
 
 Examples: the public GitHub repository (`app.py`, `harmonize.py`, `README.md`, sample data)
 and, if deployed, the Streamlit Community Cloud URL. If you host a new website, submit a
@@ -95,7 +98,9 @@ web app:
    - total counts, a calibration-reliability note (share of cell-specific ratios and median
      overlap), and a CSV containing every selected cell-month, including both metrics,
      per-day rates, days in month and both calibration ratios;
-   - an optional hotspot-level CSV filtered to the chosen area and period.
+   - an optional hotspot-level CSV filtered to the chosen area and period (generated with
+     `--export-hotspots`; omitted from the bundled deployment because the real extract has
+     3.5 million rows).
 
 **Why it is useful.** The calendar answers practical questions quickly: Which months are the
 peak burning season here? Which years were exceptional? Is this month above or below the
@@ -103,21 +108,29 @@ historical median? Because the output is a consistent, downloadable table, it al
 scientists and land managers who need a defensible, reproducible fire-activity series rather
 than a screenshot.
 
-**Validation and transparency.** Eight unit tests cover the quality filter, timestamp and
-time-zone handling, both metrics, single-sensor fallback, the full two-sensor pipeline, raw
-detection mode, and CSV/Parquet consistency; CI runs them on every push. The app ships with
-the calibration fit (VIIRS versus MODIS cell-days) and R² in the sidebar and in
-`data/harmonization_fit.png`, plus the calibration ratio and basis for every cell. On our
-calibration run with `<insert real data range>` the overlap covered `<insert years>` and the
-global MODIS/VIIRS ratio was `<insert ratio>` with R² = `<insert R² from data/meta.json>`
-(detection-based values are also in `meta.json`). (The bundled demo dataset is synthetic and
-is clearly labelled as such in the app; replace it with real FIRMS data for judging.)
+**Bundled real data.** The submitted app bundles a NASA FIRMS Argentina extract for January
+2012–October 2026 (local UTC−3), using MODIS Terra/Aqua and VIIRS Suomi NPP 375 m. Of
+3,838,615 raw detections, 3,536,296 pass the confidence filter (92.1%). They cover 4,133
+0.25° cells and 199,587 cell-months. The 2012–2026 overlap contains 319,734 MODIS and
+654,276 VIIRS cell-days. October 2026 is the last complete month, so the app never compares a
+partial month with full historical months. The raw CSVs are not committed; the harmonized
+table and provenance metadata are.
+
+**Validation and transparency.** Nine unit tests cover the quality filter, timestamp and
+time-zone handling, both metrics, date-window filtering, single-sensor fallback, the full
+two-sensor pipeline, raw detection mode, and CSV/Parquet consistency; CI runs them on every
+push. The app ships with the calibration fit (VIIRS versus MODIS cell-days) and R² in the
+sidebar and in `data/harmonization_fit.png`, plus the calibration ratio and basis for every
+cell. In the bundled run, the overlap covered 2012–2026 and the overall MODIS/VIIRS
+cell-day ratio was **0.489** (slope 0.488, R² 0.597). The detection-based calibration is
+also in `meta.json`: ratio **0.300**, slope 0.217, R² 0.783. Cell-specific ratios cover 99%
+of cells; the rest use the overall fallback.
 
 **Limitations we are explicit about.** A single multiplicative ratio cannot fully remove
 differences in resolution, diurnal sampling or small-fire sensitivity; cell-day
 deduplication makes counts platform-independent but can merge distinct fires in the same
 cell on the same day; cloud/smoke and sensor degradation are not corrected; counts are
-detections/cell-days, not burned area; and cells with little overlap fall back to the global
+detections/cell-days, not burned area; and cells with little overlap fall back to the overall
 ratio. Every row records which basis was used so users can filter or downweight less reliable
 cells. The README documents these caveats, the exact algorithm and its assumptions.
 

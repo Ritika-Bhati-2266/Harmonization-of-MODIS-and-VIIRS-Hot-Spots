@@ -577,11 +577,14 @@ def run_pipeline(
     outdir,
     synthetic=False,
     bbox=None,
+    region=None,
     source_files=(),
     dedup=True,
     tz_offset=0.0,
     parquet=True,
     export_hotspots=False,
+    end_month=None,
+    start_month=None,
 ):
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
@@ -591,6 +594,18 @@ def run_pipeline(
         raise ValueError("No hotspots left after quality filtering")
 
     prepared = prepare_detections(filtered, tz_offset=tz_offset)
+    if start_month is not None:
+        floor = pd.Period(str(start_month), freq="M")
+        prepared = prepared[
+            prepared["year"] * 100 + prepared["month"]
+            >= floor.year * 100 + floor.month
+        ]
+    if end_month is not None:
+        cutoff = pd.Period(str(end_month), freq="M")
+        prepared = prepared[
+            prepared["year"] * 100 + prepared["month"]
+            <= cutoff.year * 100 + cutoff.month
+        ]
     monthly = aggregate_monthly(prepared)
     if monthly.empty:
         raise ValueError("No hotspots left after temporal aggregation")
@@ -656,7 +671,8 @@ def run_pipeline(
     meta = {
         "synthetic": bool(synthetic),
         "bbox": list(bbox) if bbox is not None else None,
-        "source_files": [str(p) for p in source_files],
+        "region": str(region) if region is not None else None,
+        "source_files": [Path(p).name for p in source_files],
         "raw_hotspots": int(len(hotspots)),
         "filtered_hotspots": int(len(filtered)),
         "sensors": sorted(filtered["sensor"].unique().tolist()),
@@ -670,6 +686,8 @@ def run_pipeline(
         "max_year_month": (
             f"{int(last['year'])}-{int(last['month']):02d}" if last is not None else None
         ),
+        "start_month": str(start_month) if start_month is not None else None,
+        "end_month": str(end_month) if end_month is not None else None,
         "parquet": wrote_parquet,
         "hotspot_file": hotspot_path.name if hotspot_path is not None else None,
         "calibration": stats_cell_days,
@@ -715,6 +733,10 @@ def main():
     parser.add_argument("--modis", nargs="+", help="MODIS FIRMS CSV file(s)")
     parser.add_argument("--viirs", nargs="+", help="VIIRS FIRMS CSV file(s)")
     parser.add_argument("--outdir", default="data", help="Output directory")
+    parser.add_argument(
+        "--region",
+        help="Human-readable region name stored in meta.json (e.g. Argentina)",
+    )
     parser.add_argument("--seed", type=int, default=42, help="Synthetic data seed")
     parser.add_argument(
         "--no-dedup",
@@ -737,7 +759,27 @@ def main():
         action="store_true",
         help="Also write hotspot-level records for download in the app (can be large)",
     )
+    parser.add_argument(
+        "--start-month",
+        metavar="YYYY-MM",
+        help="Drop records before this local month",
+    )
+    parser.add_argument(
+        "--end-month",
+        metavar="YYYY-MM",
+        help="Drop records after this local month (useful to exclude a partial month)",
+    )
     args = parser.parse_args()
+    for option in ("start_month", "end_month"):
+        value = getattr(args, option)
+        if value is not None:
+            try:
+                pd.Period(value, freq="M")
+            except ValueError:
+                parser.error(f"--{option.replace('_', '-')} must use YYYY-MM format")
+    if args.start_month is not None and args.end_month is not None:
+        if pd.Period(args.start_month, freq="M") > pd.Period(args.end_month, freq="M"):
+            parser.error("--start-month must not be after --end-month")
 
     if args.demo:
         meta = run_demo(
@@ -763,11 +805,14 @@ def main():
             args.outdir,
             synthetic=False,
             bbox=None,
+            region=args.region,
             source_files=list(args.modis) + list(args.viirs),
             dedup=not args.no_dedup,
             tz_offset=args.tz_offset,
             parquet=not args.no_parquet,
             export_hotspots=args.export_hotspots,
+            end_month=args.end_month,
+            start_month=args.start_month,
         )
 
     cal = meta["calibration"]

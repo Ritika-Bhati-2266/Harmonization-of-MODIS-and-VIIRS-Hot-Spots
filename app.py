@@ -706,7 +706,7 @@ with st.sidebar.expander("Harmonization fit"):
     if cal:
         st.write(
             f"Cell-days overlap: **{cal.get('overlap_start')}–{cal.get('overlap_end')}**  \n"
-            f"Global MODIS/VIIRS ratio: **{cal.get('global_ratio_modis_over_viirs', float('nan')):.2f}**  \n"
+            f"Overall MODIS/VIIRS ratio: **{cal.get('global_ratio_modis_over_viirs', float('nan')):.2f}**  \n"
             f"Slope: **{cal.get('fit_slope', float('nan')):.2f}**, R²: **{cal.get('fit_r2', float('nan')):.3f}**"
         )
     if cal_det:
@@ -733,6 +733,7 @@ st.sidebar.markdown(
 sensor_label = " + ".join(meta.get("sensors", [])) or "MODIS + VIIRS"
 first_year = int(frame["year"].min())
 last_year = int(frame["year"].max())
+region_label = meta.get("region") or "Custom region"
 data_pill = "Synthetic demo" if meta.get("synthetic", False) else "NASA FIRMS data"
 st.markdown(
     f"""
@@ -746,6 +747,7 @@ st.markdown(
     </p>
     <div class="pill-row">
         <span class="pill pill-accent">{data_pill}</span>
+        <span class="pill">{region_label}</span>
         <span class="pill">{sensor_label}</span>
         <span class="pill">{first_year}–{last_year}</span>
         <span class="pill">0.25° grid</span>
@@ -1007,11 +1009,19 @@ with st.expander("Hotspot-level download"):
             )
 
 with st.expander("Method, data and limitations"):
+    if meta.get("synthetic", False):
+        data_line = "**Data.** Synthetic demo detections; replace with NASA FIRMS for judging."
+    else:
+        tz = meta.get("tz_offset_hours")
+        tz_text = f"UTC{float(tz):+.0f}" if tz is not None else "UTC"
+        data_line = (
+            f"**Data.** NASA FIRMS active-fire detections for **{region_label}**, "
+            f"{first_year}–{last_year}: MODIS (Terra/Aqua) and VIIRS (Suomi NPP). "
+            f"The bundled extract ends with a complete month; months use local time ({tz_text})."
+        )
     st.markdown(
-        """
-**Data.** NASA FIRMS active-fire detections from MODIS (Terra/Aqua, 2000–present) and
-VIIRS (Suomi NPP, NOAA-20/21, 2012–present).
-
+        data_line
+        + """
 **Quality filter.** MODIS confidence ≥ 30; VIIRS nominal/high confidence (l/n/h mapped to
 20/60/85). Two metrics are computed and both are exported: **fire cell-days** (one detection
 per 0.25° cell per sensor per day, used by default) and **hotspot detections** (raw detection
@@ -1043,7 +1053,8 @@ st.markdown(
     Challenge: Harmonization of MODIS and VIIRS Hot Spots<br>
     Hotspot data: NASA FIRMS · Harmonized to a 0.25° grid ·
     <a href="{GITHUB_URL}" target="_blank">Source code and method notes</a><br>
-    The bundled demo dataset is synthetic until real FIRMS files are supplied.
+    Bundled extract: {region_label} · {first_year}–{last_year} ·
+    overlap calibration {cal.get('overlap_start')}–{cal.get('overlap_end')}.
 </div>
 """,
     unsafe_allow_html=True,

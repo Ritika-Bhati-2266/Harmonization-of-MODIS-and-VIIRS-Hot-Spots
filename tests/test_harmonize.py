@@ -210,6 +210,25 @@ class PipelineTest(unittest.TestCase):
             self.assertEqual(meta["calibration"]["metric"], "cell_days")
             self.assertEqual(meta["calibration_detections"]["metric"], "detections")
 
+    def test_start_end_month_and_region(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            hot = self.build_hotspots(tmp, seed=9)
+            outdir = Path(tmp) / "out"
+            meta = h.run_pipeline(
+                hot,
+                outdir,
+                parquet=False,
+                start_month="2020-01",
+                end_month="2020-12",
+                region="Testland",
+            )
+            result = pd.read_csv(outdir / "harmonized_monthly.csv")
+            self.assertEqual(result["year"].unique().tolist(), [2020])
+            self.assertEqual(meta["years"], [2020])
+            self.assertEqual(meta["start_month"], "2020-01")
+            self.assertEqual(meta["end_month"], "2020-12")
+            self.assertEqual(meta["region"], "Testland")
+
     def test_parquet_matches_csv(self):
         with tempfile.TemporaryDirectory() as tmp:
             hot = self.build_hotspots(tmp, seed=3)

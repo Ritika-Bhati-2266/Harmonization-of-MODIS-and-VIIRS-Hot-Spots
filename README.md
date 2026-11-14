@@ -3,9 +3,11 @@
 **One consistent record of when and where Earth burns.**
 
 Ember Calendar is a Streamlit web application that harmonizes NASA FIRMS active-fire
-hotspots from MODIS (Terra/Aqua, 2000–present) and VIIRS (Suomi NPP, NOAA-20/21,
-2012–present) into a single monthly burning-activity series on a 0.25° grid. Users pick an
-area of interest, a date range and a month, then get:
+hotspots from MODIS (Terra/Aqua) and VIIRS (Suomi NPP) into a single monthly
+burning-activity series on a 0.25° grid. The bundled deployment covers **Argentina,
+January 2012–October 2026** (3.54 million quality-filtered detections); the pipeline can be
+pointed at any FIRMS regional extract. Users pick an area of interest, a date range and a
+month, then get:
 
 - a year × month **burning-activity calendar heatmap** (cividis by default, viridis optional),
 - the selected month compared with its **historical median**, with the percentage anomaly,
@@ -21,25 +23,29 @@ Built for the 2026 NASA Space Apps Challenge, *Harmonization of MODIS and VIIRS 
 Target users: early-warning and emergency responders, scientists, land managers and
 firefighters.
 
+**Live app:** <https://harmonization-of-modis-and-viirs-hot.onrender.com> (free Render
+instance; the first visit may take about 30 seconds while it wakes up).
+
 ## Quick start
 
 Requires Python 3.10+ (tested on 3.12).
 
 ```powershell
 python -m pip install -r requirements.txt
-
-python harmonize.py --demo
 streamlit run app.py
 ```
 
-`--demo` generates a small **synthetic** hotspot dataset for a 2.5° × 2.5° box in central
-California (2013–2026), runs the full harmonization pipeline, and writes the demo outputs to
-`data/` (CSV, Parquet, calibration table, fit plot and a hotspot-level file). This exists so
-the application and the pipeline can be demonstrated before real FIRMS files are available.
-The app also generates this demo data automatically if no harmonized file is present.
+The repository already contains the harmonized Argentina table, so the quick start needs no
+downloads. To regenerate the optional synthetic demo (small 2.5° × 2.5° box in central
+California, 2013–2026) instead:
 
-> The app shows a visible "Demo mode" banner whenever the dataset is synthetic. Replace the
-> demo data before judging.
+```powershell
+python harmonize.py --demo
+```
+
+`--demo` writes CSV, Parquet, a calibration table, a fit plot and a small hotspot-level file.
+If no harmonized file is present at all, the app falls back to this demo and shows a visible
+"Demo mode" banner. The submitted deployment uses the real Argentina extract.
 
 Run the unit tests with:
 
@@ -49,34 +55,57 @@ python -m unittest discover -s tests -v
 
 ## Deploying
 
-1. Push the repository to GitHub. The demo `data/harmonized_monthly.parquet`,
-   `data/hotspots.parquet`, `data/meta.json` and `data/harmonization_fit.png` are small
-   enough to commit so the app works without running the pipeline first; do **not** commit
-   real multi-GB FIRMS CSVs. For real data, export hotspots only for the region you plan to
-   serve.
-2. On Streamlit Community Cloud, create an app pointing at `app.py` in the repository.
-   The app auto-generates the synthetic demo only when no harmonized file is present.
-3. For a live app with real data, commit the harmonized Parquet + metadata (regional
-   extracts only) or load them from cloud storage at startup.
-4. Open the deployed URL in a private browser window, pick a region, and confirm the map,
-   calendar, anomaly chart and CSV download all work before submitting the link.
+The live app runs on Render (free web service, Python 3):
 
-`requirements.txt` covers all dependencies; the environment is plain Python 3.12.
+- Build command: `pip install -r requirements.txt`
+- Start command: `streamlit run app.py --server.port $PORT --server.address 0.0.0.0 --server.headless true`
+- First visit after idle may take ~30 seconds while the free instance wakes up.
 
-## Using real NASA FIRMS data
+The committed `data/harmonized_monthly.parquet` (2.4 MB), `data/harmonized_monthly.csv`
+(21 MB), `data/cell_calibration.csv`, `data/meta.json` and `data/harmonization_fit.png` are
+enough for the app to start without running the pipeline. Do **not** commit the raw FIRMS
+CSVs or a multi-million-row hotspot file. The app only falls back to a synthetic demo when
+no harmonized file exists.
+
+After deploying, open the URL in a private browser window and confirm the map, calendar,
+anomaly chart and CSV download work before submitting the link.
+
+## The bundled real dataset
+
+The submitted deployment uses NASA FIRMS detections for **Argentina**, downloaded from the
+public FIRMS archive mirror
+<https://huggingface.co/datasets/hotspot-harmonizers/firms>:
+
+| Item | Value |
+| --- | --- |
+| Period | January 2012–October 2026, local time (UTC−3) |
+| Sensors | MODIS Terra/Aqua + VIIRS Suomi NPP 375 m |
+| Quality-filtered hotspots | 3,536,296 of 3,838,615 (92.1%) |
+| 0.25° grid cells | 4,133 |
+| Cell-months | 199,587 |
+| Cell-day overlap | 2012–2026, ratio 0.489, slope 0.488, R² 0.597 |
+| Detection overlap | ratio 0.300, slope 0.217, R² 0.783 |
+| Cell-specific calibration | 99% of cells (the rest use the overall ratio) |
+
+October 2026 is the last **complete** month in the extract, so the app does not compare a
+partial month against full historical months. The raw FIRMS CSVs (308 MB) are not committed.
+
+## Using other NASA FIRMS data
 
 1. Download active-fire CSVs from NASA FIRMS:
    <https://firms.modaps.eosdis.nasa.gov/download/>
    Use **MODIS Collection 6.1** (or newer) and **VIIRS 375 m** (Suomi NPP and/or NOAA-20/21).
    You can request a global or regional extract and any date range; the 2012+ period is
    required for the MODIS/VIIRS overlap calibration.
-2. Run the pipeline with the downloaded files (paths with spaces must be quoted):
+2. Run the pipeline with the downloaded files (paths with spaces must be quoted). Pass
+   `--start-month`/`--end-month` to exclude incomplete months:
 
 ```powershell
 python harmonize.py `
-  --modis "D:\firms\modis_global_2000-2026.csv" `
-  --viirs "D:\firms\viirs_snpp_global_2012-2026.csv" "D:\firms\viirs_noaa20_global_2018-2026.csv" `
-  --outdir data
+  --modis "D:\firms\modis_argentina_*.csv" `
+  --viirs "D:\firms\viirs_snpp_argentina_*.csv" `
+  --outdir data --region Argentina --tz-offset -3 `
+  --start-month 2012-01 --end-month 2026-10
 ```
 
 3. Restart Streamlit. The app reads `data/harmonized_monthly.parquet` when present,
@@ -95,6 +124,9 @@ which is much faster and more memory-efficient for millions of rows.
 | `--modis FILE [FILE ...]` | One or more MODIS FIRMS CSV files |
 | `--viirs FILE [FILE ...]` | One or more VIIRS FIRMS CSV files |
 | `--outdir DIR` | Output directory (default `data`) |
+| `--region NAME` | Human-readable region name stored in `meta.json` and shown in the app |
+| `--start-month YYYY-MM` | Drop records before this local month |
+| `--end-month YYYY-MM` | Drop records after this local month (use it to exclude a partial month) |
 | `--seed N` | Synthetic data seed (default 42) |
 | `--no-dedup` | Make raw detections the default metric (both metrics are always written) |
 | `--export-hotspots` | Also write hotspot-level records (`hotspots.parquet`/`.csv`) for the app download (can be large) |
@@ -109,9 +141,9 @@ which is much faster and more memory-efficient for millions of rows.
 | `data/harmonized_monthly.parquet` | Same table in Parquet (written when pyarrow is available; the app prefers it) |
 | `data/cell_calibration.csv` | Per-cell cell-day calibration ratio, raw ratio and number of overlap months |
 | `data/harmonization_fit.png` | Scatter of VIIRS vs MODIS cell-day counts, fitted line, R², and a monthly-total time series showing the sensor transition |
-| `data/hotspots.parquet` or `.csv` | Hotspot-level records for the selected downloads, written with `--export-hotspots` (demo includes it) |
-| `data/meta.json` | Dataset provenance: synthetic flag, bounding box, raw/filtered counts, sensors, years, default metric, time zone offset, latest month, cell-day and detection calibration statistics |
-| `data/synthetic_hotspots.csv` | Demo-only raw synthetic detections (not produced for real runs) |
+| `data/hotspots.parquet` or `.csv` | Optional hotspot-level records written with `--export-hotspots`; not bundled because the real extract has 3.5 million rows |
+| `data/meta.json` | Dataset provenance: synthetic flag, region, bounding box, raw/filtered counts, sensors, years, date window, default metric, time zone offset, latest month, cell-day and detection calibration statistics |
+| `data/synthetic_hotspots.csv` | Demo-only raw synthetic detections (created only by `--demo`) |
 
 ## Method
 
@@ -149,8 +181,8 @@ spatio-temporal unit for comparison. `days_in_month`, `cell_days_per_day` and
 ### 3. Overlap calibration (VIIRS → MODIS)
 
 The overlap window is the intersection of years in which both sensors have detections
-(2013–2024 in the demo; 2012–present for FIRMS MODIS/VIIRS). Let `M` and `V` be the
-overlap counts for a cell-month.
+(2012–2026 in the bundled Argentina extract; 2012+ wherever both sensors are available).
+Let `M` and `V` be the overlap counts for a cell-month.
 
 - Global ratio: `r_global = ΣM / ΣV` over all overlap cell-months.
 - Per-cell ratio: `r_cell = ΣM / ΣV` for the cell over the overlap, used only when both
@@ -200,9 +232,9 @@ sensor transition; no artificial jump is introduced when MODIS stops.
 
 ## Testing
 
-Eight unit tests cover confidence filtering, time parsing, both metrics, time-zone month
-shifting, single-sensor fallback, the full two-sensor pipeline, raw-detection default mode,
-and CSV/Parquet consistency:
+Nine unit tests cover confidence filtering, time parsing, both metrics, time-zone month
+shifting, date-window filtering, single-sensor fallback, the full two-sensor pipeline,
+raw-detection default mode, and CSV/Parquet consistency:
 
 ```powershell
 python -m unittest discover -s tests -v
@@ -232,7 +264,6 @@ GitHub Actions runs the same suite on every push and pull request
 - The most recent month can be partial; the app flags it when it is the dataset's latest
   month. Monthly totals are also not length-normalized in the calendar, but
   `cell_days_per_day` and `detections_per_day` are provided for rate-based comparison.
-- The demo dataset is synthetic and must not be interpreted as real fire activity.
 - The app loads the full harmonized table into memory. Parquet is used automatically and is
   strongly preferred for global multi-decade runs; for extremely large deployments a
   database or tiled aggregation would be the next step. Hotspot-level files can be large and
@@ -250,7 +281,7 @@ use, and expose a REST API for emergency operations centres.
 
 ```
 app.py                    Streamlit application
-harmonize.py              Synthetic generator + harmonization pipeline + CLI
+harmonize.py              Harmonization pipeline, optional synthetic demo, CLI
 requirements.txt          Python dependencies
 data/                     Generated datasets, calibration table, fit plot, metadata
 submission/               Submission text and 7-slide demo outline
@@ -263,6 +294,8 @@ tests/                    Unit tests for the harmonization pipeline
 - NASA FIRMS — Fire Information for Resource Management System:
   <https://firms.modaps.eosdis.nasa.gov/>
 - NASA LANCE / Earthdata for near-real-time MODIS and VIIRS active-fire products.
+- Public FIRMS archive mirror used for the bundled Argentina extract:
+  <https://huggingface.co/datasets/hotspot-harmonizers/firms>
 - MODIS Collection 6.1 active fire product (MCD14ML), Giglio et al., 2016.
 - VIIRS 375 m active fire product (VNP14IMG), Schroeder et al., 2014.
 - NASA Space Apps Challenge 2026 challenge: *Harmonization of MODIS and VIIRS Hot Spots*.
