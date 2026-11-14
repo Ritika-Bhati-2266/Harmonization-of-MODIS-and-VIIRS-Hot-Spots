@@ -59,14 +59,14 @@ st.markdown(
     """
 <style>
 :root {
-    --ink: #20242a;
-    --muted: #666f78;
-    --accent: #d55e00;
-    --accent-dark: #a84700;
-    --accent-soft: #fdf1e8;
-    --surface: #ffffff;
-    --canvas: #faf8f4;
-    --line: #e8e2d8;
+    --ink: #ece6dc;
+    --muted: #98a2ad;
+    --accent: #f07a3a;
+    --accent-dark: #ffab78;
+    --accent-soft: rgba(240, 122, 58, 0.15);
+    --surface: #171b21;
+    --canvas: #0f1216;
+    --line: #29313a;
 }
 html, body, [data-testid="stAppViewContainer"] {
     background: var(--canvas);
@@ -85,7 +85,7 @@ html, body, [data-testid="stAppViewContainer"] {
     max-width: 1250px;
 }
 [data-testid="stSidebar"] {
-    background: #f3efe7;
+    background: #0b0e11;
     border-right: 1px solid var(--line);
     min-width: 335px !important;
     max-width: 335px !important;
@@ -103,9 +103,9 @@ html, body, [data-testid="stAppViewContainer"] {
     border: 1px solid var(--line);
     border-radius: 22px;
     background:
-        radial-gradient(120% 140% at 100% 0%, #fbe6d5 0%, rgba(251, 230, 213, 0) 55%),
-        linear-gradient(135deg, #ffffff 0%, #fdf9f3 100%);
-    box-shadow: 0 14px 40px rgba(64, 45, 24, 0.07);
+        radial-gradient(120% 140% at 100% 0%, rgba(240, 122, 58, 0.22) 0%, rgba(240, 122, 58, 0) 55%),
+        linear-gradient(135deg, #181c22 0%, #11151a 100%);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
     margin-bottom: 1.1rem;
 }
 .kicker {
@@ -148,7 +148,7 @@ html, body, [data-testid="stAppViewContainer"] {
 }
 .pill-accent {
     background: var(--accent-soft);
-    border-color: #f3cdb2;
+    border-color: rgba(240, 122, 58, 0.45);
     color: var(--accent-dark);
 }
 .section-head {
@@ -159,9 +159,9 @@ html, body, [data-testid="stAppViewContainer"] {
 }
 .section-head .step {
     align-items: center;
-    background: var(--ink);
+    background: var(--accent);
     border-radius: 10px;
-    color: #ffffff;
+    color: #17120d;
     display: inline-flex;
     flex: 0 0 auto;
     font-size: 0.8rem;
@@ -188,7 +188,7 @@ html, body, [data-testid="stAppViewContainer"] {
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 16px;
-    box-shadow: 0 6px 18px rgba(64, 45, 24, 0.04);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
     padding: 0.85rem 1rem;
 }
 [data-testid="stMetricLabel"] p {
@@ -199,16 +199,18 @@ html, body, [data-testid="stAppViewContainer"] {
     color: var(--ink);
     font-weight: 700;
 }
-[data-testid="stPlotlyChart"], [data-testid="stFolium"] {
+[data-testid="stPlotlyChart"] {
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 18px;
-    box-shadow: 0 8px 24px rgba(64, 45, 24, 0.05);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.25);
     overflow: hidden;
     padding: 0.35rem;
 }
-[data-testid="stFolium"] iframe {
-    border-radius: 14px;
+iframe[title="streamlit_folium.st_folium"] {
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.25);
 }
 [data-testid="stSidebar"] [data-testid="stForm"] {
     background: var(--surface);
@@ -230,13 +232,13 @@ button[kind="primary"], [data-testid="stDownloadButton"] button {
     background: var(--accent);
     border: 1px solid var(--accent);
     border-radius: 10px;
-    color: #ffffff;
-    font-weight: 600;
+    color: #17120d;
+    font-weight: 700;
 }
 button[kind="primary"]:hover, [data-testid="stDownloadButton"] button:hover {
-    background: var(--accent-dark);
-    border-color: var(--accent-dark);
-    color: #ffffff;
+    background: #ff9354;
+    border-color: #ff9354;
+    color: #17120d;
 }
 [data-testid="stAlert"] {
     border-radius: 14px;
@@ -394,15 +396,36 @@ def region_map(bounds):
     fmap = folium.Map(
         location=center,
         zoom_start=zoom_for(max(bounds[2] - bounds[0], bounds[3] - bounds[1])),
-        tiles="OpenStreetMap",
+        tiles=None,
         control_scale=True,
     )
+    folium.TileLayer(
+        tiles=(
+            "https://server.arcgisonline.com/ArcGIS/rest/services/"
+            "Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+        ),
+        attr=(
+            "Tiles &copy; Esri &mdash; Esri, HERE, Garmin, "
+            "&copy; OpenStreetMap contributors"
+        ),
+        name="Dark gray canvas",
+    ).add_to(fmap)
+    folium.TileLayer(
+        tiles=(
+            "https://server.arcgisonline.com/ArcGIS/rest/services/"
+            "Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}"
+        ),
+        attr=" ",
+        name="Labels and boundaries",
+        overlay=True,
+        control=False,
+    ).add_to(fmap)
     folium.Rectangle(
         bounds=[[bounds[1], bounds[0]], [bounds[3], bounds[2]]],
-        color="#D55E00",
+        color="#f07a3a",
         weight=2,
         fill=True,
-        fill_opacity=0.05,
+        fill_opacity=0.08,
     ).add_to(fmap)
     Draw(
         export=False,
@@ -453,10 +476,15 @@ def calendar_heatmap(calendar, scale, unit, value_col):
             xgap=1,
             ygap=1,
             colorbar=dict(
-                title=dict(text=short_unit.capitalize(), side="right"),
+                title=dict(
+                    text=short_unit.capitalize(),
+                    side="right",
+                    font=dict(color="#cfc8be"),
+                ),
                 thickness=12,
                 len=0.72,
                 outlinewidth=0,
+                tickfont=dict(color="#aab3bd"),
             ),
             hovertemplate="%{y} %{x}<br>%{z:,.0f} " + unit + "<extra></extra>",
         )
@@ -466,7 +494,7 @@ def calendar_heatmap(calendar, scale, unit, value_col):
         margin=dict(l=10, r=10, t=20, b=10),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Inter, Segoe UI, sans-serif", size=13, color="#20242a"),
+        font=dict(family="Inter, Segoe UI, sans-serif", size=13, color="#e7e1d8"),
         xaxis=dict(side="top", showgrid=False, tickfont=dict(size=12)),
         yaxis=dict(
             autorange="reversed",
@@ -474,7 +502,7 @@ def calendar_heatmap(calendar, scale, unit, value_col):
             showgrid=False,
             tickfont=dict(size=12),
         ),
-        hoverlabel=dict(bgcolor="#ffffff", bordercolor="#e8e2d8", font_size=12),
+        hoverlabel=dict(bgcolor="#1c222a", bordercolor="#3a434d", font_size=12),
     )
     return figure
 
@@ -492,7 +520,7 @@ def anomaly_chart(calendar, month, unit, value_col):
     pct = (current - median) / median * 100 if median > 0 else float("nan")
 
     colors = [
-        "#d55e00" if year == latest["year"] else "#b9c6d4"
+        "#f07a3a" if year == latest["year"] else "#58718a"
         for year in rows["year"]
     ]
     figure = go.Figure(
@@ -508,11 +536,11 @@ def anomaly_chart(calendar, month, unit, value_col):
         figure.add_hline(
             y=median,
             line_dash="dash",
-            line_color="#20242a",
+            line_color="#e7e1d8",
             line_width=1.4,
             annotation_text=f"Median {median:,.0f}",
             annotation_position="top left",
-            annotation_font=dict(size=12, color="#20242a"),
+            annotation_font=dict(size=12, color="#e7e1d8"),
         )
     figure.update_layout(
         height=360,
@@ -521,12 +549,12 @@ def anomaly_chart(calendar, month, unit, value_col):
         xaxis_title=None,
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Inter, Segoe UI, sans-serif", size=13, color="#20242a"),
+        font=dict(family="Inter, Segoe UI, sans-serif", size=13, color="#e7e1d8"),
         showlegend=False,
         bargap=0.28,
         xaxis=dict(showgrid=False, tickfont=dict(size=12)),
-        yaxis=dict(gridcolor="#ece7df", zeroline=False),
-        hoverlabel=dict(bgcolor="#ffffff", bordercolor="#e8e2d8", font_size=12),
+        yaxis=dict(gridcolor="#2b333c", zeroline=False),
+        hoverlabel=dict(bgcolor="#1c222a", bordercolor="#3a434d", font_size=12),
     )
     summary = {
         "month": month,
