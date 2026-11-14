@@ -1,0 +1,38 @@
+﻿from pathlib import Path
+
+p = Path(r"D:\PROJECTS\Hackathon\Harmonization of MODIS and VIIRS Hot Spots\app.py")
+s = p.read_text(encoding="utf-8")
+
+# Fix mojibake remnants (replacement chars were stripped earlier)
+s = s.replace("0.25A cell", "0.25\u00B0 cell")
+s = s.replace("0.25A\u00B0 cell", "0.25\u00B0 cell")
+s = s.replace("0.25 cell", "0.25\u00B0 cell")
+s = s.replace("0.25A grid", "0.25\u00B0 grid")
+s = s.replace("0.25 grid", "0.25\u00B0 grid")
+s = s.replace("0.25A harmonized grid", "0.25\u00B0 harmonized grid")
+s = s.replace("MODIS + VIIRS A 0.25A harmonized grid", "MODIS + VIIRS \u00b7 0.25\u00b0 harmonized grid")
+s = s.replace("MODIS + VIIRS  0.25 harmonized grid", "MODIS + VIIRS \u00b7 0.25\u00b0 harmonized grid")
+s = s.replace("NASA FIRMS MODIS + VIIRS  0.25 harmonized grid", "NASA FIRMS MODIS + VIIRS \u00b7 0.25\u00b0 harmonized grid")
+s = s.replace("NASA FIRMS A Harmonized to a 0.25 grid A", "NASA FIRMS \u00b7 Harmonized to a 0.25\u00b0 grid \u00b7")
+s = s.replace("NASA FIRMS  Harmonized to a 0.25 grid ", "NASA FIRMS \u00b7 Harmonized to a 0.25\u00b0 grid \u00b7")
+s = s.replace("NASA FIRMS  Harmonized to a 0.25\u00b0 grid ", "NASA FIRMS \u00b7 Harmonized to a 0.25\u00b0 grid \u00b7")
+
+# ranges/dashes and symbols
+s = s.replace('"{last_year}', '\u2013{last_year}')
+s = s.replace('"{cal.get(\'overlap_end\')}', "\u2013{cal.get('overlap_end')}")
+s = s.replace('confidence  30', 'confidence \u2265 30')
+s = s.replace('confidence % 30', 'confidence \u2265 30')
+s = s.replace('0.13.0', '0.1\u20133.0')
+s = s.replace('0.1"3.0', '0.1\u20133.0')
+s = s.replace('VIIRS A ratio', 'VIIRS \u00d7 ratio')
+s = s.replace('VIIRS  ratio', 'VIIRS \u00d7 ratio')
+s = s.replace(' NASA Space Apps Challenge 2026 A ', ' \u00b7 NASA Space Apps Challenge 2026 \u00b7 ')
+s = s.replace(' NASA Space Apps Challenge 2026  ', ' \u00b7 NASA Space Apps Challenge 2026 \u00b7 ')
+s = s.replace('<strong>Ember Calendar</strong> A NASA Space Apps Challenge 2026 A', '<strong>Ember Calendar</strong> \u00b7 NASA Space Apps Challenge 2026 \u00b7')
+s = s.replace('Bundled extract: {region_label} A {first_year}', 'Bundled extract: {region_label} \u00b7 {first_year}')
+s = s.replace('Bundled extract: {region_label}  {first_year}', 'Bundled extract: {region_label} \u00b7 {first_year}')
+s = s.replace('{last_year} A overlap', '{last_year} \u00b7 overlap')
+s = s.replace('{last_year}  overlap', '{last_year} \u00b7 overlap')
+
+p.write_text(s, encoding="utf-8")
+print("ok")
