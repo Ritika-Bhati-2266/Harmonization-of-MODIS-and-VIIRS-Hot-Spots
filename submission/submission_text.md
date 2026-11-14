@@ -46,7 +46,7 @@ Releases. Test the link in a private browser window before submitting.
 
 ## Link to Final Project
 
-`[REPOSITORY OR LIVE APP LINK — public, no login required]`
+`https://github.com/Ritika-Bhati-2266/Harmonization-of-MODIS-and-VIIRS-Hot-Spots`
 
 Examples: the public GitHub repository (`app.py`, `harmonize.py`, `README.md`, sample data)
 and, if deployed, the Streamlit Community Cloud URL. If you host a new website, submit a

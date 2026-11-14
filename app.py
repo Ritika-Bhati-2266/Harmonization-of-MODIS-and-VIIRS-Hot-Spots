@@ -16,6 +16,9 @@ META_PATH = DATA_DIR / "meta.json"
 FIT_PATH = DATA_DIR / "harmonization_fit.png"
 HOTSPOTS_PARQUET = DATA_DIR / "hotspots.parquet"
 HOTSPOTS_CSV = DATA_DIR / "hotspots.csv"
+GITHUB_URL = (
+    "https://github.com/Ritika-Bhati-2266/Harmonization-of-MODIS-and-VIIRS-Hot-Spots"
+)
 
 
 def data_path():
@@ -51,6 +54,229 @@ st.set_page_config(
     page_title="Ember Calendar - Harmonized Fire Hotspot Atlas",
     layout="wide",
 )
+
+st.markdown(
+    """
+<style>
+:root {
+    --ink: #20242a;
+    --muted: #666f78;
+    --accent: #d55e00;
+    --accent-dark: #a84700;
+    --accent-soft: #fdf1e8;
+    --surface: #ffffff;
+    --canvas: #faf8f4;
+    --line: #e8e2d8;
+}
+html, body, [data-testid="stAppViewContainer"] {
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+[data-testid="stHeader"] {
+    background: transparent;
+}
+[data-testid="stAppDeployButton"] {
+    display: none;
+}
+.block-container {
+    padding-top: 1.6rem;
+    padding-bottom: 3rem;
+    max-width: 1250px;
+}
+[data-testid="stSidebar"] {
+    background: #f3efe7;
+    border-right: 1px solid var(--line);
+    min-width: 335px !important;
+    max-width: 335px !important;
+}
+[data-testid="stSidebar"] .block-container {
+    padding-top: 1.4rem;
+}
+[data-testid="stSidebar"] h3 {
+    color: var(--ink);
+    font-size: 1.02rem;
+    letter-spacing: 0.01em;
+}
+.hero {
+    padding: 1.7rem 1.9rem 1.5rem;
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    background:
+        radial-gradient(120% 140% at 100% 0%, #fbe6d5 0%, rgba(251, 230, 213, 0) 55%),
+        linear-gradient(135deg, #ffffff 0%, #fdf9f3 100%);
+    box-shadow: 0 14px 40px rgba(64, 45, 24, 0.07);
+    margin-bottom: 1.1rem;
+}
+.kicker {
+    color: var(--accent-dark);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-bottom: 0.45rem;
+}
+.hero h1 {
+    color: var(--ink);
+    font-size: clamp(2.1rem, 4vw, 3.1rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.04;
+    margin: 0 0 0.55rem 0;
+}
+.hero p {
+    color: var(--muted);
+    font-size: 1.02rem;
+    line-height: 1.55;
+    max-width: 60rem;
+    margin: 0;
+}
+.pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-top: 1rem;
+}
+.pill {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.28rem 0.7rem;
+}
+.pill-accent {
+    background: var(--accent-soft);
+    border-color: #f3cdb2;
+    color: var(--accent-dark);
+}
+.section-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin: 1.7rem 0 0.55rem;
+}
+.section-head .step {
+    align-items: center;
+    background: var(--ink);
+    border-radius: 10px;
+    color: #ffffff;
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: 0.8rem;
+    font-weight: 700;
+    height: 1.55rem;
+    justify-content: center;
+    margin-top: 0.15rem;
+    width: 1.55rem;
+}
+.section-head h2 {
+    color: var(--ink);
+    font-size: 1.32rem;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    line-height: 1.25;
+    margin: 0;
+}
+.section-head p {
+    color: var(--muted);
+    font-size: 0.88rem;
+    margin: 0.15rem 0 0;
+}
+[data-testid="stMetric"] {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: 0 6px 18px rgba(64, 45, 24, 0.04);
+    padding: 0.85rem 1rem;
+}
+[data-testid="stMetricLabel"] p {
+    color: var(--muted);
+    font-size: 0.8rem;
+}
+[data-testid="stMetricValue"] {
+    color: var(--ink);
+    font-weight: 700;
+}
+[data-testid="stPlotlyChart"], [data-testid="stFolium"] {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: 0 8px 24px rgba(64, 45, 24, 0.05);
+    overflow: hidden;
+    padding: 0.35rem;
+}
+[data-testid="stFolium"] iframe {
+    border-radius: 14px;
+}
+[data-testid="stSidebar"] [data-testid="stForm"] {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 0.9rem 0.85rem 0.35rem;
+}
+div[data-testid="stExpander"] {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+}
+div[data-testid="stExpander"] summary {
+    color: var(--ink);
+    font-weight: 600;
+}
+button[kind="primary"], [data-testid="stDownloadButton"] button {
+    background: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    color: #ffffff;
+    font-weight: 600;
+}
+button[kind="primary"]:hover, [data-testid="stDownloadButton"] button:hover {
+    background: var(--accent-dark);
+    border-color: var(--accent-dark);
+    color: #ffffff;
+}
+[data-testid="stAlert"] {
+    border-radius: 14px;
+}
+.footer {
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 0.82rem;
+    line-height: 1.6;
+    margin-top: 2.3rem;
+    padding-top: 1rem;
+}
+.footer a {
+    color: var(--accent-dark);
+    font-weight: 600;
+    text-decoration: none;
+}
+.footer a:hover {
+    text-decoration: underline;
+}
+@media (max-width: 720px) {
+    .hero { padding: 1.2rem 1.1rem; }
+    .block-container { padding-top: 1rem; }
+    [data-testid="stSidebar"] {
+        min-width: 88vw !important;
+        max-width: 88vw !important;
+    }
+}
+</style>
+""",
+    unsafe_allow_html=True,
+)
+
+
+def section_header(number, title, hint=""):
+    st.markdown(
+        f'<div class="section-head"><span class="step">{number}</span>'
+        f"<div><h2>{title}</h2><p>{hint}</p></div></div>",
+        unsafe_allow_html=True,
+    )
 
 
 def ensure_data():
@@ -168,7 +394,7 @@ def region_map(bounds):
     fmap = folium.Map(
         location=center,
         zoom_start=zoom_for(max(bounds[2] - bounds[0], bounds[3] - bounds[1])),
-        tiles="CartoDB positron",
+        tiles="OpenStreetMap",
         control_scale=True,
     )
     folium.Rectangle(
@@ -217,6 +443,7 @@ def calendar_heatmap(calendar, scale, unit, value_col):
         .sort_index()
     )
     years = [str(int(y)) for y in pivot.index]
+    short_unit = unit.replace("fire ", "")
     figure = go.Figure(
         go.Heatmap(
             z=pivot.to_numpy(),
@@ -225,17 +452,29 @@ def calendar_heatmap(calendar, scale, unit, value_col):
             colorscale=scale,
             xgap=1,
             ygap=1,
-            colorbar=dict(title="Count"),
+            colorbar=dict(
+                title=dict(text=short_unit.capitalize(), side="right"),
+                thickness=12,
+                len=0.72,
+                outlinewidth=0,
+            ),
             hovertemplate="%{y} %{x}<br>%{z:,.0f} " + unit + "<extra></extra>",
         )
     )
     figure.update_layout(
-        height=max(320, 26 * len(years) + 140),
-        margin=dict(l=10, r=10, t=40, b=10),
-        title="Monthly burning-activity calendar",
-        xaxis=dict(side="top"),
-        yaxis=dict(autorange="reversed", title="Year"),
-        template="plotly_white",
+        height=max(320, 28 * len(years) + 120),
+        margin=dict(l=10, r=10, t=20, b=10),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Inter, Segoe UI, sans-serif", size=13, color="#20242a"),
+        xaxis=dict(side="top", showgrid=False, tickfont=dict(size=12)),
+        yaxis=dict(
+            autorange="reversed",
+            title=None,
+            showgrid=False,
+            tickfont=dict(size=12),
+        ),
+        hoverlabel=dict(bgcolor="#ffffff", bordercolor="#e8e2d8", font_size=12),
     )
     return figure
 
@@ -253,7 +492,7 @@ def anomaly_chart(calendar, month, unit, value_col):
     pct = (current - median) / median * 100 if median > 0 else float("nan")
 
     colors = [
-        "#D55E00" if year == latest["year"] else "#4C78A8"
+        "#d55e00" if year == latest["year"] else "#b9c6d4"
         for year in rows["year"]
     ]
     figure = go.Figure(
@@ -261,6 +500,7 @@ def anomaly_chart(calendar, month, unit, value_col):
             x=[str(int(y)) for y in rows["year"]],
             y=rows[value_col],
             marker_color=colors,
+            marker_line_width=0,
             hovertemplate="%{x}<br>%{y:,.0f} " + unit + "<extra></extra>",
         )
     )
@@ -268,18 +508,25 @@ def anomaly_chart(calendar, month, unit, value_col):
         figure.add_hline(
             y=median,
             line_dash="dash",
-            line_color="#222222",
-            annotation_text=f"Historical median: {median:,.0f}",
+            line_color="#20242a",
+            line_width=1.4,
+            annotation_text=f"Median {median:,.0f}",
             annotation_position="top left",
+            annotation_font=dict(size=12, color="#20242a"),
         )
     figure.update_layout(
-        height=380,
-        margin=dict(l=10, r=10, t=50, b=10),
-        title=f"{MONTHS[month - 1]} counts by year (all cells in selection)",
+        height=360,
+        margin=dict(l=10, r=10, t=24, b=10),
         yaxis_title=unit.capitalize(),
-        xaxis_title="Year",
-        template="plotly_white",
+        xaxis_title=None,
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Inter, Segoe UI, sans-serif", size=13, color="#20242a"),
         showlegend=False,
+        bargap=0.28,
+        xaxis=dict(showgrid=False, tickfont=dict(size=12)),
+        yaxis=dict(gridcolor="#ece7df", zeroline=False),
+        hoverlabel=dict(bgcolor="#ffffff", bordercolor="#e8e2d8", font_size=12),
     )
     summary = {
         "month": month,
@@ -308,24 +555,26 @@ full_bounds = data_bounds(frame)
 if "bbox" not in st.session_state:
     st.session_state.bbox = list(full_bounds)
 
-st.sidebar.header("Area of interest")
+st.sidebar.markdown("### Location")
+st.sidebar.caption(
+    "Draw a rectangle or polygon on the map, or type bounds. "
+    "Longitudes are negative in the western hemisphere."
+)
 sig = "_".join(f"{v:.3f}" for v in st.session_state.bbox)
 with st.sidebar.form("bounds_form"):
-    col_w, col_e = st.columns(2)
-    west = col_w.number_input(
+    west = st.number_input(
         "West longitude", value=float(st.session_state.bbox[0]), format="%.3f", key=f"w_{sig}"
     )
-    east = col_e.number_input(
+    east = st.number_input(
         "East longitude", value=float(st.session_state.bbox[2]), format="%.3f", key=f"e_{sig}"
     )
-    col_s, col_n = st.columns(2)
-    south = col_s.number_input(
+    south = st.number_input(
         "South latitude", value=float(st.session_state.bbox[1]), format="%.3f", key=f"s_{sig}"
     )
-    north = col_n.number_input(
+    north = st.number_input(
         "North latitude", value=float(st.session_state.bbox[3]), format="%.3f", key=f"n_{sig}"
     )
-    if st.form_submit_button("Apply bounds", use_container_width=True):
+    if st.form_submit_button("Apply bounds", use_container_width=True, type="primary"):
         st.session_state.bbox = clamp_bounds([west, south, east, north], full_bounds)
         st.rerun()
 
@@ -333,11 +582,8 @@ if st.sidebar.button("Reset to full dataset", use_container_width=True):
     st.session_state.bbox = list(full_bounds)
     st.rerun()
 
-st.sidebar.caption(
-    "Draw a rectangle or polygon on the map, or type bounds. "
-    "Longitudes are negative in the western hemisphere."
-)
-
+st.sidebar.markdown("---")
+st.sidebar.markdown("### Time window")
 first_date = frame["date"].min().date()
 last_date = frame["date"].max().date()
 picked = st.sidebar.date_input(
@@ -367,12 +613,9 @@ month = st.sidebar.selectbox(
     format_func=lambda m: MONTHS[m - 1],
     key="month_pick",
 )
-scale = st.sidebar.radio(
-    "Calendar color ramp",
-    options=["cividis", "viridis"],
-    horizontal=True,
-    help="Both ramps are perceptually uniform; cividis is optimized for color-vision deficiency.",
-)
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("### Display")
 metric_options = list(METRIC_CHOICES)
 metric = st.sidebar.radio(
     "Count metric",
@@ -387,6 +630,12 @@ metric = st.sidebar.radio(
     ),
 )
 value_col, unit = METRIC_CHOICES[metric]
+scale = st.sidebar.radio(
+    "Calendar color ramp",
+    options=["cividis", "viridis"],
+    horizontal=True,
+    help="Both ramps are perceptually uniform; cividis is optimized for color-vision deficiency.",
+)
 
 with st.sidebar.expander("Harmonization fit"):
     cal = meta.get("calibration", {})
@@ -411,10 +660,37 @@ with st.sidebar.expander("Harmonization fit"):
         "See README for method and limitations."
     )
 
-st.title("Ember Calendar")
-st.caption(
-    "A harmonized MODIS + VIIRS active-fire hotspot record: when does your region burn, "
-    "and is this year unusual?"
+st.sidebar.markdown(
+    f'<div class="footer" style="margin-top:1.2rem;">'
+    f'<a href="{GITHUB_URL}" target="_blank">View source on GitHub</a><br>'
+    "NASA FIRMS MODIS + VIIRS · 0.25° harmonized grid</div>",
+    unsafe_allow_html=True,
+)
+
+sensor_label = " + ".join(meta.get("sensors", [])) or "MODIS + VIIRS"
+first_year = int(frame["year"].min())
+last_year = int(frame["year"].max())
+data_pill = "Synthetic demo" if meta.get("synthetic", False) else "NASA FIRMS data"
+st.markdown(
+    f"""
+<div class="hero">
+    <div class="kicker">NASA Space Apps Challenge 2026</div>
+    <h1>Ember Calendar</h1>
+    <p>
+        One consistent record of when and where Earth burns. Explore a harmonized
+        MODIS + VIIRS active-fire history for any region, spot its seasonal rhythm,
+        and see whether the latest month is unusual.
+    </p>
+    <div class="pill-row">
+        <span class="pill pill-accent">{data_pill}</span>
+        <span class="pill">{sensor_label}</span>
+        <span class="pill">{first_year}–{last_year}</span>
+        <span class="pill">0.25° grid</span>
+        <span class="pill">{len(frame):,} cell-months</span>
+    </div>
+</div>
+""",
+    unsafe_allow_html=True,
 )
 if meta.get("synthetic", False):
     st.info(
@@ -423,7 +699,11 @@ if meta.get("synthetic", False):
         "downloads to replace it, or point the app at real data before judging.",
     )
 
-st.subheader("1. Choose a region")
+section_header(
+    1,
+    "Choose a region",
+    "Draw a rectangle or polygon on the map, or fine-tune the bounds in the sidebar.",
+)
 drawings = None
 try:
     drawings = region_map(st.session_state.bbox)
@@ -442,7 +722,8 @@ if drawings:
 
 bounds = st.session_state.bbox
 st.caption(
-    f"Bounds: W {bounds[0]:.3f}, S {bounds[1]:.3f}, E {bounds[2]:.3f}, N {bounds[3]:.3f}"
+    f"Active bounds  ·  W {bounds[0]:.3f}  ·  S {bounds[1]:.3f}  ·  "
+    f"E {bounds[2]:.3f}  ·  N {bounds[3]:.3f}"
 )
 
 selected = frame[
@@ -458,13 +739,57 @@ if selected.empty:
     st.warning("No harmonized hotspots in this selection. Widen the area or the date range.")
     st.stop()
 
+cell_count = selected[["cell_lat", "cell_lon"]].drop_duplicates().shape[0]
+month_count = selected[["year", "month"]].drop_duplicates().shape[0]
+if "calibration_basis" in selected.columns and len(selected):
+    cell_share = float((selected["calibration_basis"] == "cell").mean() * 100)
+    median_overlap = (
+        float(selected["overlap_months"].median())
+        if "overlap_months" in selected.columns
+        else float("nan")
+    )
+    calibration_value = f"{cell_share:.0f}%"
+    calibration_help = (
+        "Share of selected cell-months with a cell-specific MODIS/VIIRS ratio; the rest "
+        f"use the global ratio. Median overlap: {median_overlap:.0f} months with both sensors."
+    )
+else:
+    calibration_value = "n/a"
+    calibration_help = "Calibration basis is not present in this dataset."
+
+summary_cols = st.columns(4)
+summary_cols[0].metric(
+    "Grid cells",
+    f"{cell_count:,}",
+    help="0.25° cells with at least one harmonized month in this selection.",
+)
+summary_cols[1].metric(
+    "Cell-months",
+    f"{len(selected):,}",
+    help="Rows in the monthly export for this selection.",
+)
+summary_cols[2].metric(
+    "Months covered",
+    f"{month_count:,}",
+    help="Distinct calendar months with data across the selection.",
+)
+summary_cols[3].metric(
+    "Cell-specific calibration",
+    calibration_value,
+    help=calibration_help,
+)
+
 calendar = (
     selected.groupby(["year", "month"], as_index=False)[value_col]
     .sum()
     .sort_values(["year", "month"])
 )
 
-st.subheader("2. Burning-activity calendar")
+section_header(
+    2,
+    "Burning-activity calendar",
+    "Monthly harmonized activity across every selected 0.25° cell.",
+)
 figure = calendar_heatmap(calendar, scale, unit, value_col)
 st.plotly_chart(figure, use_container_width=True)
 st.caption(
@@ -472,7 +797,11 @@ st.caption(
     "in your selection. Blank cells mean no data for that month."
 )
 
-st.subheader(f"3. {MONTHS[month - 1]} vs the historical median")
+section_header(
+    3,
+    f"{MONTHS[month - 1]} vs the historical median",
+    "The latest year with data for this month compared with earlier years.",
+)
 anomaly_figure, summary = anomaly_chart(calendar, month, unit, value_col)
 if anomaly_figure is None:
     st.info(f"No {MONTHS[month - 1]} data in this selection.")
@@ -505,24 +834,12 @@ else:
             "This is the most recent month in the dataset and may be partial; "
             "its anomaly will keep changing as new detections arrive."
         )
-    if "calibration_basis" in selected.columns:
-        cell_share = (
-            (selected["calibration_basis"] == "cell").mean() * 100
-            if len(selected)
-            else 0.0
-        )
-        median_overlap = (
-            float(selected["overlap_months"].median())
-            if "overlap_months" in selected.columns
-            else float("nan")
-        )
-        st.caption(
-            f"Calibration reliability: {cell_share:.0f}% of selected cell-months use a "
-            "cell-specific ratio; the rest fall back to the global ratio. "
-            f"Median overlap for these cells: {median_overlap:.0f} months with both sensors."
-        )
 
-st.subheader("4. Data and downloads")
+section_header(
+    4,
+    "Data and downloads",
+    "Audit the numbers or take the harmonized table into your own analysis.",
+)
 export_columns = [
     "cell_lat",
     "cell_lon",
@@ -645,7 +962,15 @@ and the most recent month may be partial.
         """
     )
 
-st.caption(
-    "Ember Calendar · NASA Space Apps Challenge 2026 · Hotspot data: NASA FIRMS · "
-    "Demo dataset is synthetic until real FIRMS files are supplied."
+st.markdown(
+    f"""
+<div class="footer">
+    <strong>Ember Calendar</strong> · NASA Space Apps Challenge 2026 ·
+    Challenge: Harmonization of MODIS and VIIRS Hot Spots<br>
+    Hotspot data: NASA FIRMS · Harmonized to a 0.25° grid ·
+    <a href="{GITHUB_URL}" target="_blank">Source code and method notes</a><br>
+    The bundled demo dataset is synthetic until real FIRMS files are supplied.
+</div>
+""",
+    unsafe_allow_html=True,
 )
