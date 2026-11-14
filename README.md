@@ -5,7 +5,7 @@
 Ember Calendar is a Streamlit web application that harmonizes NASA FIRMS active-fire
 hotspots from MODIS (Terra/Aqua) and VIIRS (Suomi NPP) into a single monthly
 burning-activity series on a 0.25° grid. The bundled deployment covers **Argentina,
-January 2012–October 2026** (3.54 million quality-filtered detections); the pipeline can be
+November 2000–October 2026** (4.37 million quality-filtered detections); the pipeline can be
 pointed at any FIRMS regional extract. Users pick an area of interest, a date range and a
 month, then get:
 
@@ -61,8 +61,8 @@ The live app runs on Render (free web service, Python 3):
 - Start command: `streamlit run app.py --server.port $PORT --server.address 0.0.0.0 --server.headless true`
 - First visit after idle may take ~30 seconds while the free instance wakes up.
 
-The committed `data/harmonized_monthly.parquet` (2.4 MB), `data/harmonized_monthly.csv`
-(21 MB), `data/cell_calibration.csv`, `data/meta.json` and `data/harmonization_fit.png` are
+The committed `data/harmonized_monthly.parquet` (3.4 MB), `data/harmonized_monthly.csv`
+(32 MB), `data/cell_calibration.csv`, `data/meta.json` and `data/harmonization_fit.png` are
 enough for the app to start without running the pipeline. Do **not** commit the raw FIRMS
 CSVs or a multi-million-row hotspot file. The app only falls back to a synthetic demo when
 no harmonized file exists.
@@ -78,17 +78,17 @@ public FIRMS archive mirror
 
 | Item | Value |
 | --- | --- |
-| Period | January 2012–October 2026, local time (UTC−3) |
+| Period | November 2000–October 2026, local time (UTC−3) |
 | Sensors | MODIS Terra/Aqua + VIIRS Suomi NPP 375 m |
-| Quality-filtered hotspots | 3,536,296 of 3,838,615 (92.1%) |
-| 0.25° grid cells | 4,133 |
-| Cell-months | 199,587 |
+| Quality-filtered hotspots | 4,373,521 of 4,714,843 (92.8%) |
+| 0.25° grid cells | 4,221 |
+| Cell-months | 301,741 |
 | Cell-day overlap | 2012–2026, ratio 0.489, slope 0.488, R² 0.597 |
 | Detection overlap | ratio 0.300, slope 0.217, R² 0.783 |
 | Cell-specific calibration | 99% of cells (the rest use the overall ratio) |
 
 October 2026 is the last **complete** month in the extract, so the app does not compare a
-partial month against full historical months. The raw FIRMS CSVs (308 MB) are not committed.
+partial month against full historical months. The raw FIRMS CSVs (378 MB) are not committed.
 
 ## Using other NASA FIRMS data
 
@@ -105,7 +105,7 @@ python harmonize.py `
   --modis "D:\firms\modis_argentina_*.csv" `
   --viirs "D:\firms\viirs_snpp_argentina_*.csv" `
   --outdir data --region Argentina --tz-offset -3 `
-  --start-month 2012-01 --end-month 2026-10
+  --start-month 2000-01 --end-month 2026-10
 ```
 
 3. Restart Streamlit. The app reads `data/harmonized_monthly.parquet` when present,
@@ -220,6 +220,8 @@ sensor transition; no artificial jump is introduced when MODIS stops.
 - **Anomaly:** the latest year with data for the chosen calendar month is compared with the
   median of earlier years in the selected range (dashed line and percentage). If that month
   is the latest month in the dataset, the app warns that it may be partial.
+- **Trend:** annual totals are plotted as bars with a 3-year moving average, so longer-term
+  increases or declines are visible without year-to-year noise.
 - **Calibration reliability:** the app reports the share of selected cell-months that use a
   cell-specific ratio versus the global fallback, and the median number of overlap months.
 - **CSV download:** every selected cell-month with both metrics, sensor contributions,

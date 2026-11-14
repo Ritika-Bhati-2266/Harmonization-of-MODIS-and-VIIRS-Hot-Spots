@@ -24,9 +24,9 @@ Ember Calendar is a web application that turns NASA satellite fire detections in
 consistent monthly burning-activity calendar for a region of interest. It harmonizes MODIS and
 VIIRS active-fire hotspots from NASA FIRMS onto a 0.25° grid and calibrates VIIRS to MODIS on
 their overlapping years, so a change of sensor no longer looks like a change in fire
-activity. The submitted build uses a real Argentina extract: 3,536,296 quality-filtered
-detections from 2012 to October 2026, aggregated into 199,587 cell-months across 4,133 grid
-cells. Users draw an area of interest or type coordinates, choose a date range, and
+activity. The submitted build uses a real Argentina extract: 4,373,521 quality-filtered
+detections from November 2000 to October 2026, aggregated into 301,741 cell-months across
+4,221 grid cells. Users draw an area of interest or type coordinates, choose a date range, and
 immediately see a year-by-month heatmap of harmonized burning activity, the selected month
 compared with its historical median, and a downloadable CSV. Two calibrated metrics are
 available — fire cell-days (platform-independent) and raw hotspot detections — together with
@@ -94,6 +94,8 @@ web app:
      ramp (cividis, with viridis as an option);
    - the selected month in the latest year versus the median of earlier years, with the
      percentage anomaly and a warning when the latest month may be partial;
+   - annual totals with a 3-year moving average, so longer-term trends are visible without
+     year-to-year noise;
    - a switchable count metric (fire cell-days or raw detections) that updates every chart;
    - total counts, a calibration-reliability note (share of cell-specific ratios and median
      overlap), and a CSV containing every selected cell-month, including both metrics,
@@ -108,10 +110,10 @@ historical median? Because the output is a consistent, downloadable table, it al
 scientists and land managers who need a defensible, reproducible fire-activity series rather
 than a screenshot.
 
-**Bundled real data.** The submitted app bundles a NASA FIRMS Argentina extract for January
-2012–October 2026 (local UTC−3), using MODIS Terra/Aqua and VIIRS Suomi NPP 375 m. Of
-3,838,615 raw detections, 3,536,296 pass the confidence filter (92.1%). They cover 4,133
-0.25° cells and 199,587 cell-months. The 2012–2026 overlap contains 319,734 MODIS and
+**Bundled real data.** The submitted app bundles a NASA FIRMS Argentina extract for November
+2000–October 2026 (local UTC−3), using MODIS Terra/Aqua and VIIRS Suomi NPP 375 m. Of
+4,714,843 raw detections, 4,373,521 pass the confidence filter (92.8%). They cover 4,221
+0.25° cells and 301,741 cell-months. The 2012–2026 overlap contains 319,734 MODIS and
 654,276 VIIRS cell-days. October 2026 is the last complete month, so the app never compares a
 partial month with full historical months. The raw CSVs are not committed; the harmonized
 table and provenance metadata are.
@@ -142,15 +144,24 @@ and deploy the app as a public service with an API for emergency operations cent
 
 ## Use of Super Intelligence (SI)
 
-We used an AI coding assistant during the hackathon for code scaffolding, documentation,
-refactoring suggestions and design critique. The assistant did not generate data and is not
-part of the runtime system: harmonization is deterministic statistics (confidence filtering,
-0.25° monthly aggregation, per-cell ratio estimation with shrinkage, clipping) and the web
-app performs no inference. All generated code was reviewed, tested and is reproducible from
-the repository; the team takes full responsibility for it. No personal data, private data or
-credentials were shared with the assistant, and no third-party model is trained on the
-project or NASA data. A machine-learning gap-filler is listed only as future work and is not
-used in the submitted application.
+We used an AI coding assistant during the hackathon for code scaffolding, debugging,
+documentation and design critique. The assistant did not generate data and is not part of the
+runtime system: harmonization is deterministic statistics (confidence filtering, 0.25°
+monthly aggregation, per-cell ratio estimation with shrinkage, clipping) and the web app
+performs no inference. All generated code was reviewed, tested and is reproducible from the
+repository; the team takes full responsibility for it.
+
+In the SI disclosure form, the applicable options are:
+
+- ☑ Coding, Debugging, or Troubleshooting
+- ☑ Writing, Editing, or Translation
+- ☑ Presentation, Video, or Audio (slide text and layout)
+
+No SI-generated images, audio or video are included, so no watermark is required. All app
+screenshots and the calibration plot are generated directly from the running project. No
+personal data, private data or credentials were shared with the assistant, and no third-party
+model is trained on the project or NASA data. A machine-learning gap-filler is listed only as
+future work and is not used in the submitted application.
 
 ---
 
@@ -166,6 +177,9 @@ instruments through NASA LANCE and NASA Earthdata:
   NOAA-20/21, 2012–present, `confidence` nominal (l/n/h).
 - Access: <https://firms.modaps.eosdis.nasa.gov/download/> (FIRMS area/date CSV extracts).
   Data are free and open; FIRMS/Earthdata attribution is retained in the README and app.
+- Bundled extract: FIRMS Argentina CSVs (MODIS 2000–2026, VIIRS Suomi NPP 2012–2026) from the
+  public FIRMS archive mirror
+  <https://huggingface.co/datasets/hotspot-harmonizers/firms>.
 
 The app derives everything from these hotspot records: 0.25° cell assignment, monthly counts,
 the MODIS/VIIRS overlap calibration and the harmonized burning-activity calendar. No

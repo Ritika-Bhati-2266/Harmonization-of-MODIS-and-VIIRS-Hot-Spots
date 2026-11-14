@@ -601,6 +601,49 @@ def anomaly_chart(calendar, month, unit, value_col):
     return figure, summary
 
 
+def trend_chart(yearly, unit):
+    if yearly.empty:
+        return None
+    rolling = yearly.rolling(3, center=True, min_periods=1).mean()
+    figure = go.Figure()
+    figure.add_trace(
+        go.Bar(
+            x=[str(int(y)) for y in yearly.index],
+            y=yearly.to_numpy(),
+            marker_color="#58718a",
+            marker_line_width=0,
+            name="Annual total",
+            hovertemplate="%{x}<br>%{y:,.0f} " + unit + "<extra></extra>",
+        )
+    )
+    figure.add_trace(
+        go.Scatter(
+            x=[str(int(y)) for y in rolling.index],
+            y=rolling.to_numpy(),
+            mode="lines",
+            line=dict(color="#f07a3a", width=2.4),
+            name="3-year mean",
+            hovertemplate="%{x}<br>3-yr mean %{y:,.0f} " + unit + "<extra></extra>",
+        )
+    )
+    figure.update_layout(
+        height=340,
+        margin=dict(l=10, r=10, t=24, b=10),
+        yaxis_title=unit.capitalize(),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Inter, Segoe UI, sans-serif", size=13, color="#e7e1d8"),
+        showlegend=True,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0),
+        bargap=0.28,
+        xaxis=dict(showgrid=False, tickfont=dict(size=12)),
+        yaxis=dict(gridcolor="#2b333c", zeroline=False, automargin=True),
+        hovermode="x unified",
+        hoverlabel=dict(bgcolor="#1c222a", bordercolor="#3a434d", font_size=12),
+    )
+    return figure
+
+
 ensure_data()
 meta = load_meta()
 active_path = data_path()
@@ -913,6 +956,21 @@ else:
 
 section_header(
     4,
+    "Multi-year trend",
+    "Annual totals with a 3-year moving average to reveal longer-term change.",
+)
+trend_figure = trend_chart(yearly, unit)
+if trend_figure is None:
+    st.info("No yearly data in this selection.")
+else:
+    st.plotly_chart(trend_figure, use_container_width=True, config={"displayModeBar": False})
+    st.caption(
+        f"Bars are total harmonized {unit} per year across the selection; the orange "
+        "line is a 3-year centered mean, which smooths year-to-year noise."
+    )
+
+section_header(
+    5,
     "Data and downloads",
     "Audit the numbers or take the harmonized table into your own analysis.",
 )
@@ -957,9 +1015,9 @@ with st.expander("Hotspot-level download"):
     spot_file = hotspot_path()
     if spot_file is None:
         st.caption(
-            "Hotspot-level records are not available for this dataset. Re-run "
-            "`harmonize.py` with `--export-hotspots` to generate them (the demo "
-            "dataset already includes a small file)."
+            "Hotspot-level records are not bundled in this deployment to keep the app "
+            "light. Re-run `harmonize.py` with `--export-hotspots` to generate them for "
+            "your region and date range."
         )
     elif st.checkbox(
         "Load hotspot-level records for this selection", key="load_spots"
