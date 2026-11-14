@@ -9,8 +9,12 @@ area of interest, a date range and a month, then get:
 
 - a year × month **burning-activity calendar heatmap** (cividis by default, viridis optional),
 - the selected month compared with its **historical median**, with the percentage anomaly,
-- regional totals and a **downloadable CSV** of the harmonized monthly counts, including the
-  MODIS and VIIRS contributions and the calibration ratio used for each cell,
+- two switchable metrics — **fire cell-days** (platform-independent, one detection per cell
+  per sensor per day) and **raw hotspot detections** — both calibrated and both exported,
+- regional totals, a **downloadable monthly CSV**, and an optional **hotspot-level CSV** for
+  the selected area and period,
+- **calibration reliability** information: per-cell ratio, overlap months, and whether a
+  cell used a cell-specific or the global ratio,
 - the **VIIRS-to-MODIS calibration fit** and diagnostics in the sidebar.
 
 Built for the 2026 NASA Space Apps Challenge, *Harmonization of MODIS and VIIRS Hot Spots*.
@@ -30,12 +34,34 @@ streamlit run app.py
 
 `--demo` generates a small **synthetic** hotspot dataset for a 2.5° × 2.5° box in central
 California (2013–2026), runs the full harmonization pipeline, and writes the demo outputs to
-`data/`. This exists so the application and the pipeline can be demonstrated before real
-FIRMS files are available. The app also generates this demo data automatically if
-`data/harmonized_monthly.csv` is missing.
+`data/` (CSV, Parquet, calibration table, fit plot and a hotspot-level file). This exists so
+the application and the pipeline can be demonstrated before real FIRMS files are available.
+The app also generates this demo data automatically if no harmonized file is present.
 
 > The app shows a visible "Demo mode" banner whenever the dataset is synthetic. Replace the
 > demo data before judging.
+
+Run the unit tests with:
+
+```powershell
+python -m unittest discover -s tests -v
+```
+
+## Deploying
+
+1. Push the repository to GitHub. The demo `data/harmonized_monthly.parquet`,
+   `data/hotspots.parquet`, `data/meta.json` and `data/harmonization_fit.png` are small
+   enough to commit so the app works without running the pipeline first; do **not** commit
+   real multi-GB FIRMS CSVs. For real data, export hotspots only for the region you plan to
+   serve.
+2. On Streamlit Community Cloud, create an app pointing at `app.py` in the repository.
+   The app auto-generates the synthetic demo only when no harmonized file is present.
+3. For a live app with real data, commit the harmonized Parquet + metadata (regional
+   extracts only) or load them from cloud storage at startup.
+4. Open the deployed URL in a private browser window, pick a region, and confirm the map,
+   calendar, anomaly chart and CSV download all work before submitting the link.
+
+`requirements.txt` covers all dependencies; the environment is plain Python 3.12.
 
 ## Using real NASA FIRMS data
 
@@ -53,12 +79,13 @@ python harmonize.py `
   --outdir data
 ```
 
-3. Restart Streamlit. The app reads `data/harmonized_monthly.csv` and `data/meta.json`.
+3. Restart Streamlit. The app reads `data/harmonized_monthly.parquet` when present,
+   otherwise `data/harmonized_monthly.csv`, plus `data/meta.json`.
 
 Large global extracts can be several GB. The pipeline keeps only the columns it needs, but
-for repeated global runs it is worth filtering by region/date upstream. For multi-hundred-
-million-row jobs, convert the harmonized output to Parquet and load that in the app instead
-of CSV (see *Limitations*).
+for repeated global runs it is worth filtering by region/date upstream. A Parquet copy of
+the harmonized table is written automatically and loaded by the app in preference to CSV,
+which is much faster and more memory-efficient for millions of rows.
 
 ### Command-line options
 
@@ -69,15 +96,21 @@ of CSV (see *Limitations*).
 | `--viirs FILE [FILE ...]` | One or more VIIRS FIRMS CSV files |
 | `--outdir DIR` | Output directory (default `data`) |
 | `--seed N` | Synthetic data seed (default 42) |
+| `--no-dedup` | Make raw detections the default metric (both metrics are always written) |
+| `--export-hotspots` | Also write hotspot-level records (`hotspots.parquet`/`.csv`) for the app download (can be large) |
+| `--tz-offset HOURS` | Add this many hours to UTC acquisition time before assigning months (e.g. `-8`) |
+| `--no-parquet` | Skip writing the Parquet copy |
 
 ### Outputs
 
 | File | Contents |
 | --- | --- |
-| `data/harmonized_monthly.csv` | The app's input: cell, year, month, MODIS count, VIIRS count, harmonized count, calibration ratio, source |
-| `data/cell_calibration.csv` | Per-cell calibration ratio, raw ratio and number of overlap months |
-| `data/harmonization_fit.png` | Scatter of VIIRS vs MODIS cell-month counts, fitted line, R², and a monthly-total time series showing the sensor transition |
-| `data/meta.json` | Dataset provenance: synthetic flag, bounding box, raw/filtered counts, sensors, years, calibration statistics |
+| `data/harmonized_monthly.csv` | Main table: cell, year, month, both metric series (MODIS, VIIRS, harmonized, ratio), per-day values, days in month, overlap months, calibration basis, source |
+| `data/harmonized_monthly.parquet` | Same table in Parquet (written when pyarrow is available; the app prefers it) |
+| `data/cell_calibration.csv` | Per-cell cell-day calibration ratio, raw ratio and number of overlap months |
+| `data/harmonization_fit.png` | Scatter of VIIRS vs MODIS cell-day counts, fitted line, R², and a monthly-total time series showing the sensor transition |
+| `data/hotspots.parquet` or `.csv` | Hotspot-level records for the selected downloads, written with `--export-hotspots` (demo includes it) |
+| `data/meta.json` | Dataset provenance: synthetic flag, bounding box, raw/filtered counts, sensors, years, default metric, time zone offset, latest month, cell-day and detection calibration statistics |
 | `data/synthetic_hotspots.csv` | Demo-only raw synthetic detections (not produced for real runs) |
 
 ## Method
@@ -90,12 +123,28 @@ of CSV (see *Limitations*).
 - Drop rows with missing coordinates/dates and coordinates outside valid ranges. Records
   with unknown confidence are kept (FIRMS files always provide it in practice).
 
-### 2. Gridding and monthly aggregation
+### 2. Deduplication, local time and monthly aggregation
+
+MODIS and VIIRS are both flown on multiple platforms (MODIS: Terra and Aqua; VIIRS: Suomi
+NPP, NOAA-20, NOAA-21). Counting every detection would make the series depend on how many
+satellites happened to be flying, and the VIIRS platform count changes over time (NOAA-20
+from 2018, NOAA-21 from 2023), which would create a false upward trend. The pipeline
+therefore computes **two metrics for every cell-month-sensor**:
+
+- **fire cell-days**: one per 0.25° cell per sensor per day, after deduplicating identical
+  records from overlapping FIRMS downloads (the default metric);
+- **detections**: the raw detection count.
+
+Both are calibrated and exported, and the app lets the user switch between them. Acquisition
+timestamps are built from `acq_date` + `acq_time` (UTC) and can be shifted to local time with
+`--tz-offset HOURS` before year/month assignment, so a fire late on the last day of a month
+is attributed to the local month rather than the UTC month.
 
 Every detection is assigned to a 0.25° cell (cell center = `floor(lon/0.25)*0.25 + 0.125`,
 same for latitude). Counts are aggregated to `cell × year × month × sensor`. This removes
 the resolution mismatch between MODIS (1 km) and VIIRS (375 m) and produces a stable
-spatio-temporal unit for comparison.
+spatio-temporal unit for comparison. `days_in_month`, `cell_days_per_day` and
+`detections_per_day` are included for rate-based analysis.
 
 ### 3. Overlap calibration (VIIRS → MODIS)
 
@@ -110,32 +159,57 @@ overlap counts for a cell-month.
   and `r = w · r_cell + (1 − w) · r_global`. The result is clipped to `[0.1, 3.0]`.
   Cells without a usable overlap ratio fall back to `r_global`.
 - Diagnostics: ordinary least squares of `M` on `V` (intercept allowed), R², and
-  `r_global` are written to `meta.json` and plotted in `harmonization_fit.png`.
+  `r_global` are written to `meta.json` and plotted in `harmonization_fit.png`. The
+  calibration is run separately for the cell-day and detection metrics; both sets of
+  statistics are stored in `meta.json`.
 
 ### 4. Building the harmonized series
 
-`count_harmonized = M` when MODIS detected at least one hotspot in that cell-month;
-otherwise `count_harmonized = r · V` using the cell's calibrated ratio. In other words,
+For each metric, `harmonized = M` when MODIS detected at least one hotspot in that
+cell-month; otherwise `harmonized = r · V` using the cell's calibrated ratio. In other words,
 MODIS is the reference sensor where it exists, and calibrated VIIRS fills gaps during the
 MODIS era and carries the series after MODIS ends. `source` records which path was used
-(`modis` or `viirs_calibrated`), and `modis_count`, `viirs_count` and `ratio` are preserved
-for transparency. A single multiplicative ratio per cell makes the series continuous across
-the sensor transition; no artificial jump is introduced when MODIS stops.
+(`modis` or `viirs_calibrated`). The output preserves both metrics
+(`modis_cell_days`/`viirs_cell_days`/`count_harmonized_cell_days`/`ratio_cell_days` and the
+`..._detections` equivalents), plus `overlap_months` and `calibration_basis`
+(`cell` or `global`) so every value can be audited and low-confidence cells can be
+identified. A single multiplicative ratio per cell makes the series continuous across the
+sensor transition; no artificial jump is introduced when MODIS stops.
 
 ## App behaviour
 
 - **Region selection:** draw a rectangle or polygon with the map's draw tool, or type west/
   south/east/north bounds in the sidebar. Bounds are clipped to the dataset extent.
 - **Date range and month of interest:** both filter the calendar and the anomaly chart.
-- **Calendar:** year rows × month columns, sum of harmonized hotspots across all cells in
-  the selection. Blank cells mean no data, not zero.
+- **Count metric:** switch between fire cell-days (platform-independent) and raw hotspot
+  detections; every chart, metric and the export follow the selection.
+- **Calendar:** year rows × month columns, sum of harmonized counts across all cells in the
+  selection. Blank cells mean no data, not zero.
 - **Anomaly:** the latest year with data for the chosen calendar month is compared with the
-  median of earlier years in the selected range (dashed line and percentage).
-- **CSV download:** every selected cell-month with sensor contributions, calibration ratio
-  and source flag.
+  median of earlier years in the selected range (dashed line and percentage). If that month
+  is the latest month in the dataset, the app warns that it may be partial.
+- **Calibration reliability:** the app reports the share of selected cell-months that use a
+  cell-specific ratio versus the global fallback, and the median number of overlap months.
+- **CSV download:** every selected cell-month with both metrics, sensor contributions,
+  per-day values, days in month, ratios, overlap months, calibration basis and source flag.
+- **Hotspot-level download:** when `data/hotspots.parquet` (or `.csv`) exists, the app can
+  filter individual detections to the chosen area and period and export them as CSV.
 - **Accessibility:** cividis is the default color ramp (perceptually uniform and
   color-vision-deficiency friendly), viridis is offered as an alternative; charts use
   colorblind-safe orange/blue accent colors and text labels in addition to color.
+
+## Testing
+
+Eight unit tests cover confidence filtering, time parsing, both metrics, time-zone month
+shifting, single-sensor fallback, the full two-sensor pipeline, raw-detection default mode,
+and CSV/Parquet consistency:
+
+```powershell
+python -m unittest discover -s tests -v
+```
+
+GitHub Actions runs the same suite on every push and pull request
+(`.github/workflows/tests.yml`).
 
 ## Limitations and honest caveats
 
@@ -143,26 +217,34 @@ the sensor transition; no artificial jump is introduced when MODIS stops.
   spatial resolution, detection sensitivity, diurnal sampling and algorithm. A per-cell
   ratio makes counts comparable on average but cannot remove all small-fire, diurnal or
   biome-specific bias.
+- Cell-day deduplication normalizes for the changing number of satellite platforms, but it
+  can merge two distinct fires that occur in the same 0.25° cell on the same day. Raw
+  detections are therefore also provided and can be selected as the default metric.
 - The calibration assumes a stable MODIS/VIIRS relationship within each cell over time.
   It does not model trends in that relationship (sensor degradation, algorithm updates,
-  new VIIRS platforms coming online).
+  new VIIRS platforms coming online). Cells with the `global` calibration basis are less
+  reliable.
 - Cloud/smoke masking, terrain, view angle and sensor degradation are not corrected beyond
-  the confidence filter. The series counts **active-fire detections**, not burned area or
-  fire size.
+  the confidence filter. The series counts **active-fire detections/cell-days**, not burned
+  area or fire size.
 - Cells with few overlap months are dominated by the global ratio, which may be inaccurate
   in regions with unusual detection behaviour.
-- The most recent month can be partial; monthly totals are not normalized by month length.
+- The most recent month can be partial; the app flags it when it is the dataset's latest
+  month. Monthly totals are also not length-normalized in the calendar, but
+  `cell_days_per_day` and `detections_per_day` are provided for rate-based comparison.
 - The demo dataset is synthetic and must not be interpreted as real fire activity.
-- CSV is fine for regional extracts; for global multi-decade runs, the 0.25° monthly table
-  can reach millions of rows and should be stored as Parquet. The app currently loads the
-  full table into memory.
+- The app loads the full harmonized table into memory. Parquet is used automatically and is
+  strongly preferred for global multi-decade runs; for extremely large deployments a
+  database or tiled aggregation would be the next step. Hotspot-level files can be large and
+  are only loaded on request.
+- Time-zone handling requires the user to choose an offset; a single offset cannot be
+  correct for regions spanning multiple time zones.
 
 ## Future work
 
 Blend both sensors during overlap instead of MODIS-only, weight calibration by FRP or
-confidence, add per-cell uncertainty, support VIIRS 750 m, add a downloadable hotspot-level
-CSV for the selection, cache tiles for offline use, and expose a REST API for emergency
-operations centres.
+confidence, add per-cell uncertainty intervals, support VIIRS 750 m, cache tiles for offline
+use, and expose a REST API for emergency operations centres.
 
 ## Repository layout
 
@@ -172,6 +254,8 @@ harmonize.py              Synthetic generator + harmonization pipeline + CLI
 requirements.txt          Python dependencies
 data/                     Generated datasets, calibration table, fit plot, metadata
 submission/               Submission text and 7-slide demo outline
+tests/                    Unit tests for the harmonization pipeline
+.github/workflows/        CI that runs the tests
 ```
 
 ## Data sources and references

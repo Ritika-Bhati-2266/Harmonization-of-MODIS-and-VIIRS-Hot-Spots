@@ -31,7 +31,33 @@
     2025,
     2026
   ],
+  "metric": "cell_days",
+  "default_metric": "cell_days",
+  "metrics": [
+    "cell_days",
+    "detections"
+  ],
+  "tz_offset_hours": 0.0,
+  "max_year_month": "2026-10",
+  "parquet": true,
+  "hotspot_file": "hotspots.parquet",
   "calibration": {
+    "metric": "cell_days",
+    "overlap_start": 2013,
+    "overlap_end": 2024,
+    "overlap_cell_months": 5982,
+    "modis_total_overlap": 8276.0,
+    "viirs_total_overlap": 12621.0,
+    "global_ratio_modis_over_viirs": 0.6557325093098804,
+    "fit_slope": 0.6138931920623101,
+    "fit_intercept": -0.0012652052856809387,
+    "fit_r2": 0.5817351385627654,
+    "shrink_months": 6,
+    "min_confidence": 30,
+    "grid_degrees": 0.25
+  },
+  "calibration_detections": {
+    "metric": "detections",
     "overlap_start": 2013,
     "overlap_end": 2024,
     "overlap_cell_months": 5982,

@@ -5,3 +5,4 @@ plotly>=5.20
 matplotlib>=3.7
 folium>=0.15
 streamlit-folium>=0.18
+pyarrow>=14

@@ -25,10 +25,13 @@ detections into one consistent monthly burning-activity calendar for any region 
 harmonizes MODIS and VIIRS active-fire hotspots from NASA FIRMS onto a 0.25° grid and
 calibrates VIIRS to MODIS on their overlapping years, so a change of sensor no longer looks
 like a change in fire activity. Users draw an area of interest or type coordinates, choose a
-date range, and immediately see a year-by-month heatmap of hotspot counts, the selected
-month compared with its historical median, and a downloadable CSV of the harmonized data.
-Emergency managers, land managers and scientists can use it to identify peak fire seasons,
-exceptional years and anomalous months at a glance.
+date range, and immediately see a year-by-month heatmap of harmonized burning activity, the
+selected month compared with its historical median, and a downloadable CSV. Two calibrated
+metrics are available — fire cell-days (platform-independent) and raw hotspot detections —
+and a hotspot-level CSV can be exported for any area and period, together with a reliability
+flag showing whether each cell used its own calibration or the global fallback. Emergency
+managers, land managers and scientists can use it to identify peak fire seasons, exceptional
+years and anomalous months at a glance.
 
 ---
 
@@ -67,23 +70,32 @@ web app:
    FIRMS for any date range.
 2. **Quality filter.** Keep MODIS confidence ≥ 30 and VIIRS nominal/high confidence
    (`n`/`h`), then drop invalid coordinates.
-3. **Grid and aggregate.** Assign every detection to a 0.25° cell and aggregate to monthly
-   counts per cell and per sensor. This common spatio-temporal unit removes the resolution
-   mismatch.
+3. **Deduplicate, grid and aggregate.** Build full UTC timestamps from `acq_date` +
+   `acq_time`, optionally shift to local time, and compute two metrics for every cell, month
+   and sensor: (a) **fire cell-days**, at most one detection per 0.25° cell per sensor per
+   day, after removing exact duplicates from overlapping FIRMS downloads, and (b) **raw
+   hotspot detections**. The cell-day metric stops the series from depending on how many
+   satellite platforms happened to be flying (MODIS Terra/Aqua, VIIRS Suomi NPP/NOAA-20/21);
+   the raw metric preserves every detection. Both are calibrated and exported, and the app
+   lets the user switch between them.
 4. **Harmonize.** On the years where both sensors are active (2012+ for FIRMS), estimate a
-   global MODIS/VIIRS ratio and a per-cell ratio from total counts. Shrink each cell ratio
-   toward the global value with a 6-month prior and clip it to 0.1–3.0. Build the final
-   series using MODIS where it exists and calibrated VIIRS (`VIIRS × ratio`) elsewhere.
-   Every output row keeps the original MODIS count, VIIRS count, ratio and a `source` flag,
-   so the transformation is fully auditable.
+   global MODIS/VIIRS ratio and a per-cell ratio from total counts, separately for each
+   metric. Shrink each cell ratio toward the global value with a 6-month prior and clip it to
+   0.1–3.0. Build the final series using MODIS where it exists and calibrated VIIRS
+   (`VIIRS × ratio`) elsewhere. Every output row keeps both sensor series, both ratios, the
+   number of overlap months, a `calibration_basis` flag (`cell` or `global`) and a `source`
+   flag, so the transformation is fully auditable and low-confidence cells are identifiable.
 5. **Explore.** The Streamlit app lets a user draw a rectangle or polygon on a map or enter
    west/south/east/north bounds, set a date range and a month of interest, then view:
    - a year × month burning-activity calendar on a perceptually uniform, colorblind-friendly
      ramp (cividis, with viridis as an option);
    - the selected month in the latest year versus the median of earlier years, with the
-     percentage anomaly;
-   - total hotspots and a CSV containing every selected cell-month, including sensor
-     contributions and the calibration ratio.
+     percentage anomaly and a warning when the latest month may be partial;
+   - a switchable count metric (fire cell-days or raw detections) that updates every chart;
+   - total counts, a calibration-reliability note (share of cell-specific ratios and median
+     overlap), and a CSV containing every selected cell-month, including both metrics,
+     per-day rates, days in month and both calibration ratios;
+   - an optional hotspot-level CSV filtered to the chosen area and period.
 
 **Why it is useful.** The calendar answers practical questions quickly: Which months are the
 peak burning season here? Which years were exceptional? Is this month above or below the
@@ -91,21 +103,26 @@ historical median? Because the output is a consistent, downloadable table, it al
 scientists and land managers who need a defensible, reproducible fire-activity series rather
 than a screenshot.
 
-**Validation and transparency.** The app ships with the calibration fit (VIIRS versus MODIS
-monthly counts) and R² in the sidebar and in `data/harmonization_fit.png`, plus the
-calibration ratio for every cell. On our calibration run with `<insert real data range>` the
-overlap covered `<insert years>` and the global MODIS/VIIRS ratio was `<insert ratio>` with
-R² = `<insert R² from data/meta.json>`. (The bundled demo dataset is synthetic and is
-clearly labelled as such in the app; replace it with real FIRMS data for judging.)
+**Validation and transparency.** Eight unit tests cover the quality filter, timestamp and
+time-zone handling, both metrics, single-sensor fallback, the full two-sensor pipeline, raw
+detection mode, and CSV/Parquet consistency; CI runs them on every push. The app ships with
+the calibration fit (VIIRS versus MODIS cell-days) and R² in the sidebar and in
+`data/harmonization_fit.png`, plus the calibration ratio and basis for every cell. On our
+calibration run with `<insert real data range>` the overlap covered `<insert years>` and the
+global MODIS/VIIRS ratio was `<insert ratio>` with R² = `<insert R² from data/meta.json>`
+(detection-based values are also in `meta.json`). (The bundled demo dataset is synthetic and
+is clearly labelled as such in the app; replace it with real FIRMS data for judging.)
 
 **Limitations we are explicit about.** A single multiplicative ratio cannot fully remove
-differences in resolution, diurnal sampling or small-fire sensitivity; cloud/smoke and sensor
-degradation are not corrected; counts are detections, not burned area; and cells with little
-overlap fall back to the global ratio. The README documents these caveats, the exact
-algorithm and its assumptions.
+differences in resolution, diurnal sampling or small-fire sensitivity; cell-day
+deduplication makes counts platform-independent but can merge distinct fires in the same
+cell on the same day; cloud/smoke and sensor degradation are not corrected; counts are
+detections/cell-days, not burned area; and cells with little overlap fall back to the global
+ratio. Every row records which basis was used so users can filter or downweight less reliable
+cells. The README documents these caveats, the exact algorithm and its assumptions.
 
 **Roadmap.** Blend both sensors during the overlap instead of using MODIS alone, weight the
-calibration by fire radiative power, add per-cell uncertainty bands, support VIIRS 750 m,
+calibration by fire radiative power, add per-cell uncertainty intervals, support VIIRS 750 m,
 and deploy the app as a public service with an API for emergency operations centres.
 
 ---
@@ -181,28 +198,31 @@ title and intro. Add team name and member names on slide 1. Use English througho
 
 ### Slide 3 — Our solution
 - Web app: draw a region or type coordinates, pick a date range and month
-- Outputs: burning-activity calendar, anomaly vs historical median, CSV download
+- Outputs: burning-activity calendar, anomaly vs historical median, two calibrated metrics,
+  monthly and hotspot-level CSV downloads
 - Built for responders, land managers and scientists
 - Visual: three annotated screenshots (map selection, calendar, anomaly chart)
 
 ### Slide 4 — How it works
-- Pipeline: FIRMS CSVs → quality filter → 0.25° monthly counts → overlap calibration →
-  harmonized series → Streamlit app
-- MODIS confidence ≥ 30; VIIRS nominal/high
+- Pipeline: FIRMS CSVs → quality filter → dual metrics (cell-days + raw detections) →
+  0.25° monthly counts → per-metric overlap calibration → harmonized series → Streamlit app
+- MODIS confidence ≥ 30; VIIRS nominal/high; cell-day metric removes platform-count bias
 - MODIS is the reference; calibrated VIIRS fills gaps and continues after MODIS
-- Visual: simple five-box pipeline diagram with one icon per step
+- Visual: simple pipeline diagram with one icon per step
 
 ### Slide 5 — Harmonization that you can audit
 - Per-cell MODIS/VIIRS ratio, shrunk toward the global ratio and clipped to 0.1–3.0
-- Overlap fit, R² and every cell's ratio are visible in the app and repository
+- Every row carries its ratio, overlap months and a `cell`/`global` calibration-basis flag
+- Overlap fit, R² and the reliability share are visible in the app and repository
 - No artificial jump when the sensor changes
 - Visual: `harmonization_fit.png` (scatter + fit + monthly totals)
 
 ### Slide 6 — Demo: a region's fire story
 - Walk through one region: peak month, exceptional years, current month anomaly
-- Show the accessible cividis calendar and the CSV export
-- Note the honest caveats: detections ≠ burned area; ratio is an approximation
-- Visual: live app screenshot with the anomaly chart highlighted
+- Switch between cell-days and raw detections; show the accessible cividis calendar
+- Export the monthly CSV and a hotspot-level CSV for the same selection
+- Note the honest caveats: detections ≠ burned area; global-basis cells are less certain
+- Visual: live app screenshot with the anomaly chart and reliability note highlighted
 
 ### Slide 7 — Impact and next steps
 - Gives responders and land managers a consistent, fast seasonal baseline
@@ -217,6 +237,7 @@ title and intro. Add team name and member names on slide 1. Use English througho
 
 - [ ] Replace all `<...>` placeholders (team, event, real calibration numbers).
 - [ ] Replace the synthetic demo data with real FIRMS files and rerun `harmonize.py`.
+- [ ] Run `python -m unittest discover -s tests -v` (all tests green).
 - [ ] Make the demo link and final-project link public; test both in a private browser
       window with no login.
 - [ ] Confirm all team members are confirmed participants at the same Local Event.
