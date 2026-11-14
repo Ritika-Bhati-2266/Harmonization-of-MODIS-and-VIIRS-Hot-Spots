@@ -1,0 +1,48 @@
+{
+  "synthetic": true,
+  "bbox": [
+    -121.5,
+    36.0,
+    -119.0,
+    38.5
+  ],
+  "source_files": [
+    "synthetic_hotspots.csv"
+  ],
+  "raw_hotspots": 29332,
+  "filtered_hotspots": 24135,
+  "sensors": [
+    "MODIS",
+    "VIIRS"
+  ],
+  "years": [
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025,
+    2026
+  ],
+  "calibration": {
+    "overlap_start": 2013,
+    "overlap_end": 2024,
+    "overlap_cell_months": 5982,
+    "modis_total_overlap": 8597.0,
+    "viirs_total_overlap": 13335.0,
+    "global_ratio_modis_over_viirs": 0.6446944131983502,
+    "fit_slope": 0.5946446799622306,
+    "fit_intercept": 0.02375467990958447,
+    "fit_r2": 0.624820673504972,
+    "shrink_months": 6,
+    "min_confidence": 30,
+    "grid_degrees": 0.25
+  }
+}
