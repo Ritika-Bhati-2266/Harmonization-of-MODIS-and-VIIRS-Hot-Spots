@@ -259,12 +259,43 @@ button[kind="primary"]:hover, [data-testid="stDownloadButton"] button:hover {
 .footer a:hover {
     text-decoration: underline;
 }
+.insight {
+    background: var(--accent-soft);
+    border: 1px solid rgba(240, 122, 58, 0.4);
+    border-radius: 14px;
+    color: var(--ink);
+    font-size: 0.96rem;
+    line-height: 1.55;
+    margin: 0.9rem 0 0.2rem;
+    padding: 0.75rem 1rem;
+}
+.insight strong {
+    color: var(--accent-dark);
+}
 @media (max-width: 720px) {
     .hero { padding: 1.2rem 1.1rem; }
     .block-container { padding-top: 1rem; }
     [data-testid="stSidebar"] {
         min-width: 88vw !important;
         max-width: 88vw !important;
+    }
+    section.main [data-testid="stHorizontalBlock"] {
+        flex-wrap: wrap !important;
+        gap: 0.5rem !important;
+    }
+    section.main [data-testid="stHorizontalBlock"] > [data-testid="column"] {
+        flex: 1 1 44% !important;
+        min-width: 44% !important;
+        width: 44% !important;
+    }
+    [data-testid="stMetric"] {
+        padding: 0.65rem 0.75rem;
+    }
+    [data-testid="stMetricValue"] {
+        font-size: 1.45rem;
+    }
+    [data-testid="stMetricLabel"] p {
+        font-size: 0.72rem;
     }
 }
 </style>
@@ -495,12 +526,16 @@ def calendar_heatmap(calendar, scale, unit, value_col):
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         font=dict(family="Inter, Segoe UI, sans-serif", size=13, color="#e7e1d8"),
-        xaxis=dict(side="top", showgrid=False, tickfont=dict(size=12)),
+        xaxis=dict(
+            side="top",
+            showgrid=False,
+            tickfont=dict(size=11),
+        ),
         yaxis=dict(
             autorange="reversed",
             title=None,
             showgrid=False,
-            tickfont=dict(size=12),
+            tickfont=dict(size=11),
         ),
         hoverlabel=dict(bgcolor="#1c222a", bordercolor="#3a434d", font_size=12),
     )
@@ -553,7 +588,7 @@ def anomaly_chart(calendar, month, unit, value_col):
         showlegend=False,
         bargap=0.28,
         xaxis=dict(showgrid=False, tickfont=dict(size=12)),
-        yaxis=dict(gridcolor="#2b333c", zeroline=False),
+        yaxis=dict(gridcolor="#2b333c", zeroline=False, automargin=True),
         hoverlabel=dict(bgcolor="#1c222a", bordercolor="#3a434d", font_size=12),
     )
     summary = {
@@ -807,6 +842,17 @@ summary_cols[3].metric(
     help=calibration_help,
 )
 
+seasonal = selected.groupby("month")[value_col].sum()
+yearly = selected.groupby("year")[value_col].sum()
+peak_month = int(seasonal.idxmax())
+peak_year = int(yearly.idxmax())
+st.markdown(
+    f'<div class="insight">In this selection, burning activity peaks in '
+    f"<strong>{MONTHS[peak_month - 1]}</strong>; the strongest year is "
+    f"<strong>{peak_year}</strong> ({yearly.max():,.0f} {unit}).</div>",
+    unsafe_allow_html=True,
+)
+
 calendar = (
     selected.groupby(["year", "month"], as_index=False)[value_col]
     .sum()
@@ -819,7 +865,7 @@ section_header(
     "Monthly harmonized activity across every selected 0.25° cell.",
 )
 figure = calendar_heatmap(calendar, scale, unit, value_col)
-st.plotly_chart(figure, use_container_width=True)
+st.plotly_chart(figure, use_container_width=True, config={"displayModeBar": False})
 st.caption(
     f"Each cell is the monthly total of harmonized {unit} across all 0.25° cells "
     "in your selection. Blank cells mean no data for that month."
@@ -850,7 +896,7 @@ else:
         "Anomaly vs median",
         "n/a" if not np.isfinite(anomaly) else f"{anomaly:+.0f}%",
     )
-    st.plotly_chart(anomaly_figure, use_container_width=True)
+    st.plotly_chart(anomaly_figure, use_container_width=True, config={"displayModeBar": False})
     st.caption(
         "The orange bar is the most recent year with data for this calendar month. "
         "The dashed line is the median of earlier years in the selected date range. "
